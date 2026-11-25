@@ -33,4 +33,5 @@ and export reports as PDF / CSV.
 | User | kashfa123@gmail.com | kashfa123 |
 | User | laiba123@gmail.com | laiba123 |
 
-> These are demo accounts for testing only.
+## Author
+Kashfa - Department of Computer Science / IT, University of Southern Punjab

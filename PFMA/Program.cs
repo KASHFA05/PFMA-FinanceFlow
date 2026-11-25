@@ -75,9 +75,9 @@ using (var scope = app.Services.CreateScope())
 
         // Iqra (was Jane Doe)
         Rename("jane.doe@finflow.com", "Laiba", "laiba123@gmail.com", "laiba123");
-        Rename("iqra@finflow.com", "Laiba", "laiba123@gmail.com", "laiba123");
+            Rename("iqra123@gmail.com", "Laiba", "laiba123@gmail.com", "laiba123");
 
-        db.SaveChanges();
+            db.SaveChanges();
     }
     catch (Exception ex)
     {
