@@ -248,8 +248,15 @@ namespace PFMA.Controllers
             if (ModelState.IsValid)
             {
                 model.UserId = userId.Value;
-                _context.Transactions.Add(model);
-                _context.SaveChanges();
+                try
+                {
+                    _context.Transactions.Add(model);
+                    _context.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    return Content("ERROR: " + (ex.InnerException?.Message ?? ex.Message));
+                }
                 return RedirectToAction("Index");
             }
 

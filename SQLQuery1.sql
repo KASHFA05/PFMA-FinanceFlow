@@ -1,0 +1,1 @@
+﻿ALTER TABLE dbo.Transactions ADD CONSTRAINT DF_Tx_Currency_Fix DEFAULT 'PKR' FOR Currency;

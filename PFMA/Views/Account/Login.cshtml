@@ -351,7 +351,7 @@
             }
 
             layout();
-            setInterval(function () { active = (active + 1) % cards.length; layout(); }, 2400);
+            setInterval(function () { active = (active + 1) % cards.length; layout(); }, 1000);
             dots.forEach(function (d, i) { d.style.cursor = 'pointer'; d.addEventListener('click', function () { active = i; layout(); }); });
         })();
     </script>
