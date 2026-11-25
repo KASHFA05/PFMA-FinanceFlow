@@ -1,0 +1,118 @@
+@model List<PFMA.Models.BillReminder>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Bills & Payment Alerts";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    string BillIcon(string title)
+    {
+        var t = (title ?? "").ToLowerInvariant();
+        if (t.Contains("electric") || t.Contains("power") || t.Contains("wapda") || t.Contains("light")) return "fa-bolt";
+        if (t.Contains("internet") || t.Contains("wifi") || t.Contains("wi-fi") || t.Contains("ptcl")) return "fa-wifi";
+        if (t.Contains("gas")) return "fa-fire-flame-curved";
+        if (t.Contains("water")) return "fa-droplet";
+        if (t.Contains("rent") || t.Contains("house")) return "fa-house";
+        if (t.Contains("phone") || t.Contains("mobile")) return "fa-mobile-screen";
+        if (t.Contains("netflix") || t.Contains("subscription") || t.Contains("spotify")) return "fa-tv";
+        return "fa-file-invoice-dollar";
+    }
+}
+
+<div class="cf-head">
+    <div>
+        <h2 class="cf-title"><i class="fa-solid fa-file-invoice-dollar"></i> Bills &amp; Payment Alerts</h2>
+        <div class="cf-sub">Never miss a due date. Mark bills as paid and keep your alerts on.</div>
+    </div>
+    <button type="button" class="cf-add-btn" data-open="bill-add-modal"><i class="fa-solid fa-plus"></i> Add New Bill</button>
+</div>
+
+<div class="cf-stats">
+    <div class="cf-stat amber"><div class="label">Upcoming</div><div class="value">@CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", ViewBag.TotalUpcoming)</div></div>
+    <div class="cf-stat red"><div class="label">Overdue</div><div class="value" style="color:#dc2626;">@CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", ViewBag.OverdueAmount)</div></div>
+    <div class="cf-stat green"><div class="label">Paid this month</div><div class="value" style="color:#059669;">@CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", ViewBag.PaidThisMonth)</div></div>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="cf-empty">No bills yet. Click "Add New Bill" to add one.</div>
+}
+else
+{
+    <div class="cf-grid" style="grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));">
+        @foreach (var b in Model)
+        {
+            bool paid = b.Status == "Paid";
+            bool late = !paid && b.DueDate.Date < DateTime.Today;
+            <div class="cf-card @(paid ? "c-green" : (late ? "c-red" : "c-amber"))">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+                    <h3 class="cf-card-title"><i class="fa-solid @BillIcon(b.Title)" style="color:#6366f1; margin-right:0.45rem;"></i>@b.Title</h3>
+                    @if (paid)
+                    {
+                        <span class="cf-badge paid">Paid</span>
+                    }
+                    else
+                    {
+                        <span class="cf-badge red">@(late ? "Overdue" : "Unpaid / Due")</span>
+                    }
+                </div>
+                <div class="cf-meta"><i class="fa-regular fa-calendar"></i> Due: @b.DueDate.ToString("dd MMM yyyy") &bull; @b.Provider</div>
+                <div class="cf-amount-big">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", b.Amount)</div>
+                @if (!paid)
+                {
+                    <span class="cf-badge alert"><i class="fa-solid fa-bell"></i> Alert Enabled</span>
+                }
+                <div class="cf-actions">
+                    <form action="@Url.Action("ToggleStatus", "Bills")" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@b.ReminderId" />
+                        <input type="hidden" name="status" value="@(paid ? "Upcoming" : "Paid")" />
+                        <button type="submit" class="cf-btn success"><i class="fa-regular fa-circle-check"></i> @(paid ? "Mark Unpaid" : "Mark Paid")</button>
+                    </form>
+                    <button type="button" class="cf-btn" data-open="bill-edit-modal"
+                            data-fill-reminderid="@b.ReminderId" data-fill-title="@b.Title" data-fill-category="@b.Category" data-fill-provider="@b.Provider"
+                            data-fill-amount="@b.Amount.ToString("0.##", inv)" data-fill-duedate="@b.DueDate.ToString("yyyy-MM-dd")">
+                        <i class="fa-regular fa-pen-to-square"></i> Edit
+                    </button>
+                    <form action="@Url.Action("DeleteReminder", "Bills")" method="post" onsubmit="return confirm('Delete this bill?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@b.ReminderId" />
+                        <button type="submit" class="cf-btn danger"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="modal-overlay" id="bill-add-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Add New Bill</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("AddReminder", "Bills")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Status" value="Upcoming" />
+            <div class="form-group"><label>Bill Title</label><input type="text" name="Title" class="form-control" placeholder="e.g. Electricity Bill" required /></div>
+            <div class="form-group"><label>Category</label>
+                <select name="Category" class="form-control"><option>Utility</option><option>Housing</option><option>Internet</option><option>Entertainment</option><option>Other</option></select></div>
+            <div class="form-group"><label>Provider</label><input type="text" name="Provider" class="form-control" placeholder="e.g. WAPDA, PTCL" required /></div>
+            <div class="form-group"><label>Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="Amount" class="form-control" required /></div>
+            <div class="form-group"><label>Due Date</label><input type="date" name="DueDate" class="form-control" value="@DateTime.Now.AddDays(7).ToString("yyyy-MM-dd")" required /></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Bill</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="bill-edit-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Edit Bill</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("EditReminder", "Bills")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="reminderId" data-field="reminderid" />
+            <div class="form-group"><label>Bill Title</label><input type="text" name="title" data-field="title" class="form-control" required /></div>
+            <div class="form-group"><label>Category</label><input type="text" name="category" data-field="category" class="form-control" /></div>
+            <div class="form-group"><label>Provider</label><input type="text" name="provider" data-field="provider" class="form-control" /></div>
+            <div class="form-group"><label>Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="amount" data-field="amount" class="form-control" required /></div>
+            <div class="form-group"><label>Due Date</label><input type="date" name="dueDate" data-field="duedate" class="form-control" required /></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Update Bill</button></div>
+        </form>
+    </div>
+</div>

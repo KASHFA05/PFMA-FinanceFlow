@@ -1,0 +1,247 @@
+@model List<PFMA.Models.Transaction>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Transactions";
+    var categories = ViewBag.Categories as string[] ?? new string[0];
+}
+
+<div class="cf-head">
+    <div>
+        <h2 class="cf-title"><i class="fa-solid fa-list-check"></i> Transaction History</h2>
+        <div class="cf-sub">Search, filter, edit, import and export all your income and expenses.</div>
+    </div>
+    <button type="button" class="cf-add-btn" id="list-add-transaction-btn"><i class="fa-solid fa-plus"></i> Add New Transaction</button>
+</div>
+
+@if (TempData["ImportSuccess"] != null)
+{
+    <div class="alert-banner" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; margin-bottom: 1rem;">
+        <i class="fa-regular fa-circle-check" style="font-size: 1.1rem;"></i>
+        <div>@TempData["ImportSuccess"]</div>
+    </div>
+}
+@if (TempData["ImportError"] != null)
+{
+    <div class="alert-banner" style="background-color: var(--danger-bg); border: 1px solid #fecaca; color: #991b1b; margin-bottom: 1rem;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.1rem;"></i>
+        <div>@TempData["ImportError"]</div>
+    </div>
+}
+
+<!-- Filters Section -->
+<div class="content-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+    <form action="@Url.Action("Transactions", "Home")" method="get" id="filter-form">
+        <!-- Search bar -->
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <div class="search-bar" style="width: 100%; display: block;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" name="searchQuery" value="@ViewBag.SearchQuery" placeholder="Search transactions..." style="width: 100%; padding-left: 2.5rem;" onchange="document.getElementById('filter-form').submit();" />
+            </div>
+        </div>
+
+        <!-- Filter controls -->
+        <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <!-- Date Filter -->
+                <select name="dateFilter" class="form-control" style="width: auto; height: 38px; padding: 0.25rem 1rem;" onchange="document.getElementById('filter-form').submit();">
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="365">Last Year</option>
+                </select>
+
+                <!-- Category Filter -->
+                <select name="categoryFilter" class="form-control" style="width: auto; height: 38px; padding: 0.25rem 1rem;" onchange="document.getElementById('filter-form').submit();">
+                    <option value="All">All Categories</option>
+                    @foreach (var cat in categories)
+                    {
+                        <!---->
+                        if (ViewBag.CategoryFilter == cat)
+                        {
+                            <option value="@cat" selected>@cat</option>
+                        }
+                        else
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Segmented Type Filter -->
+            <div class="toggle-group">
+                <input type="hidden" name="typeFilter" id="typeFilterInput" value="@(ViewBag.TypeFilter ?? "All")" />
+                <button type="button" class="toggle-btn @(ViewBag.TypeFilter == null || ViewBag.TypeFilter == "All" ? "active" : "")" onclick="setTypeFilter('All')">All</button>
+                <button type="button" class="toggle-btn @(ViewBag.TypeFilter == "Income" ? "active" : "")" onclick="setTypeFilter('Income')">Income</button>
+                <button type="button" class="toggle-btn @(ViewBag.TypeFilter == "Expense" ? "active" : "")" onclick="setTypeFilter('Expense')">Expense</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Import / Export tools -->
+<div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem;">
+    <button type="button" class="btn-secondary" id="open-import-modal-btn" style="width: auto; padding: 0.6rem 1.1rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px;">
+        <i class="fa-solid fa-file-import"></i> Import CSV
+    </button>
+    <a href="@Url.Action("ExportExcel", "Home")" class="btn-secondary" style="width: auto; padding: 0.6rem 1.1rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; text-decoration: none;">
+        <i class="fa-regular fa-file-excel"></i> Export CSV
+    </a>
+    <a href="@Url.Action("ExportPdf", "Home")" class="btn-secondary" style="width: auto; padding: 0.6rem 1.1rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; text-decoration: none;">
+        <i class="fa-regular fa-file-pdf"></i> Download PDF Report
+    </a>
+    <a href="@Url.Action("DownloadImportTemplate", "Home")" class="btn-secondary" style="width: auto; padding: 0.6rem 1.1rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; text-decoration: none;">
+        <i class="fa-solid fa-download"></i> Download Template
+    </a>
+</div>
+
+<div class="modal-overlay" id="import-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="card-title">Import Transactions (CSV)</h3>
+            <button type="button" class="modal-close" id="import-modal-close-btn">&times;</button>
+        </div>
+        <form action="@Url.Action("ImportTransactions", "Home")" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                Columns: <strong>Date, Type, Category, Description, Amount, Notes</strong>.
+                Type is Income or Expense. Use dates like 2026-10-01. Files created by "Export CSV" can be imported again; duplicates are skipped automatically.
+                <br /><strong>Bank / JazzCash / EasyPaisa statements:</strong> download your statement, save it as CSV (Excel: File &gt; Save As &gt; CSV) and upload it here. Statements with Date, Description/Narration and Debit + Credit (or Amount) columns are recognised automatically.
+            </p>
+            <div class="form-group">
+                <label>CSV file</label>
+                <input type="file" name="file" accept=".csv" class="form-control" required />
+            </div>
+            <div class="modal-btn-row">
+                <button type="button" class="btn-secondary" id="import-modal-cancel-btn">Cancel</button>
+                <button type="submit" class="btn-primary">Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Transactions Listing -->
+<div class="cf-table-wrap">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:0.9rem 0.25rem 0;">
+        <span style="font-size:0.8rem; font-weight:700; color:#4338ca; text-transform:uppercase; letter-spacing:0.5px;">Transactions</span>
+        <span style="font-size:0.8rem; color:var(--text-light);">Showing @Model.Count items</span>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div style="text-align:center; color:var(--text-light); padding:3rem;">No transactions found matching your filters.</div>
+    }
+    else
+    {
+        <table class="cf-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tx in Model)
+                {
+                    bool income = tx.Type == "Income";
+                    <tr>
+                        <td style="white-space:nowrap;">@tx.Date.ToString("dd MMM yyyy")</td>
+                        <td>
+                            <div style="font-weight:700; color:#1e2a52;">@tx.Category</div>
+                            <div style="font-size:0.78rem; color:var(--text-light);">@tx.Description</div>
+                        </td>
+                        <td><span class="cf-badge @(income ? "income" : "expense")">@tx.Type</span></td>
+                        <td style="font-weight:800; white-space:nowrap; color:@(income ? "#059669" : "#dc2626");">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", tx.Amount)</td>
+                        <td>
+                            <div class="actions">
+                                <button type="button" class="cf-btn sm" data-open="tx-edit-modal"
+                                        data-fill-transactionid="@tx.TransactionId" data-fill-type="@tx.Type" data-fill-category="@tx.Category"
+                                        data-fill-description="@tx.Description" data-fill-amount="@tx.Amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-fill-date="@tx.Date.ToString("yyyy-MM-dd")" data-fill-notes="@tx.Notes">Edit</button>
+                                <button type="button" class="cf-btn sm" data-open="tx-details-modal"
+                                        data-text-category="@tx.Category" data-text-description="@tx.Description" data-text-type="@tx.Type"
+                                        data-text-amount="@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", tx.Amount)" data-text-date="@tx.Date.ToString("dd MMM yyyy")"
+                                        data-text-notes="@(string.IsNullOrWhiteSpace(tx.Notes) ? "-" : tx.Notes)">Details</button>
+                                <form action="@Url.Action("DeleteTransaction", "Home")" method="post" onsubmit="return confirm('Delete this transaction?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="transactionId" value="@tx.TransactionId" />
+                                    <button type="submit" class="cf-btn sm danger">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<datalist id="tx-category-list">
+    @foreach (var cat in categories)
+    {
+        <option value="@cat"></option>
+    }
+</datalist>
+
+<!-- Edit transaction -->
+<div class="modal-overlay" id="tx-edit-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Edit Transaction</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("EditTransaction", "Home")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="transactionId" data-field="transactionid" />
+            <div class="form-group"><label>Type</label>
+                <select name="type" data-field="type" class="form-control"><option value="Expense">Expense</option><option value="Income">Income</option></select></div>
+            <div class="form-group"><label>Category</label><input type="text" name="category" data-field="category" list="tx-category-list" class="form-control" required /></div>
+            <div class="form-group"><label>Description</label><input type="text" name="description" data-field="description" class="form-control" /></div>
+            <div class="form-group"><label>Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="0.01" name="amount" data-field="amount" class="form-control" required /></div>
+            <div class="form-group"><label>Date</label><input type="date" name="date" data-field="date" class="form-control" required /></div>
+            <div class="form-group"><label>Notes</label><input type="text" name="notes" data-field="notes" class="form-control" /></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Changes</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Transaction details -->
+<div class="modal-overlay" id="tx-details-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Transaction Details</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <div class="cf-inspect-item"><span>Category</span><strong data-text="category"></strong></div>
+        <div class="cf-inspect-item"><span>Description</span><strong data-text="description"></strong></div>
+        <div class="cf-inspect-item"><span>Type</span><strong data-text="type"></strong></div>
+        <div class="cf-inspect-item"><span>Amount</span><strong data-text="amount"></strong></div>
+        <div class="cf-inspect-item"><span>Date</span><strong data-text="date"></strong></div>
+        <div class="cf-inspect-item"><span>Notes</span><strong data-text="notes"></strong></div>
+        <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Close</button></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function setTypeFilter(value) {
+            document.getElementById("typeFilterInput").value = value;
+            document.getElementById("filter-form").submit();
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const listAddBtn = document.getElementById("list-add-transaction-btn");
+            const modal = document.getElementById("add-transaction-modal");
+
+            if (listAddBtn && modal) {
+                listAddBtn.addEventListener("click", () => {
+                    modal.classList.add("active");
+                });
+            }
+
+            const importModal = document.getElementById("import-modal");
+            const importOpen = document.getElementById("open-import-modal-btn");
+            const hideImport = () => importModal.classList.remove("active");
+            if (importOpen && importModal) {
+                importOpen.addEventListener("click", () => importModal.classList.add("active"));
+                document.getElementById("import-modal-close-btn").addEventListener("click", hideImport);
+                document.getElementById("import-modal-cancel-btn").addEventListener("click", hideImport);
+            }
+        });
+    </script>
+}

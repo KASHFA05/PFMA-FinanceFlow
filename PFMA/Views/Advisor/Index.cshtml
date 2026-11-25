@@ -1,0 +1,249 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Advisor View";
+    var clients = ViewBag.Clients as List<PFMA.Models.User> ?? new List<PFMA.Models.User>();
+    var selectedClient = ViewBag.SelectedClient as PFMA.Models.User;
+    var categoryBreakdown = ViewBag.CategoryBreakdown as List<dynamic> ?? new List<dynamic>();
+    var goals = ViewBag.Goals as List<PFMA.Models.SavingsGoal> ?? new List<PFMA.Models.SavingsGoal>();
+    var recommendations = ViewBag.Recommendations as List<PFMA.Models.AdvisorRecommendation> ?? new List<PFMA.Models.AdvisorRecommendation>();
+}
+
+<!-- Selected Client Selector Header -->
+<div class="content-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+    <div class="form-group" style="margin-bottom: 0;">
+        <label>Selected Client</label>
+        <form action="@Url.Action("Index", "Advisor")" method="get" id="select-client-form">
+            <select name="clientId" class="form-control" style="font-weight: 600; font-size: 1rem;" onchange="document.getElementById('select-client-form').submit();">
+                @foreach (var c in clients)
+                {
+                    <!---->
+                    if (selectedClient != null && selectedClient.UserId == c.UserId)
+                    {
+                        <option value="@c.UserId" selected>@c.Name (@(c.AccountType) Account - ID: 8829@(c.UserId))</option>
+                    }
+                    else
+                    {
+                        <option value="@c.UserId">@c.Name (@(c.AccountType) Account - ID: 8829@(c.UserId))</option>
+                    }
+                }
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Read-Only Banner -->
+<div class="alert-banner" style="background-color: #f0fdf4; color: #166534; border-color: #bbf7d0;">
+    <i class="fa-solid fa-circle-check"></i>
+    <div>
+        <strong>Connection Active:</strong> Viewing @(selectedClient?.Name)'s real-time financial tracking. Recommendations posted will sync instantly.
+    </div>
+</div>
+
+<div class="alert-banner">
+    <i class="fa-solid fa-circle-info" style="font-size: 1.1rem;"></i>
+    <div>
+        You are currently in <strong>Read-Only</strong> mode. Edits to this user's data are disabled by security policy.
+    </div>
+</div>
+
+<!-- Main Stats for Selected Client -->
+<div class="charts-section-grid">
+    <!-- Spending Trends Bar Chart -->
+    <div class="content-card">
+        <div class="card-header-flex" style="margin-bottom: 1rem;">
+            <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Spending Trends</h3>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span id="trendRange" style="font-size: 0.75rem; color: var(--text-light);">LAST 8 WEEKS</span>
+                <button type="button" id="btnWeekly" class="cf-btn sm" style="background:#4f46e5; color:#fff; border-color:#4f46e5;">Weekly</button>
+                <button type="button" id="btnMonthly" class="cf-btn sm">Monthly</button>
+            </div>
+        </div>
+        <div style="height: 200px; position: relative; margin-bottom: 1.5rem;">
+            <canvas id="clientTrendsChart"></canvas>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <div>
+                <span class="stat-label" id="avgLabel" style="font-size: 0.75rem;">Average Weekly Spend</span>
+                <div id="avgValue" style="font-size: 1.25rem; font-weight: 700;">@CurrencyHelper.Symbol(Context) 0.00</div>
+            </div>
+            <div style="text-align: right;">
+                <span class="stat-label" id="changeLabel" style="font-size: 0.75rem;">WoW Change</span>
+                <div id="changeValue" style="font-size: 1.25rem; font-weight: 700;">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown Progress Bars -->
+    <div class="content-card">
+        <div class="card-header-flex" style="margin-bottom: 1.5rem;">
+            <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Category Breakdown</h3>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            @if (categoryBreakdown.Count == 0)
+            {
+                <span style="color: var(--text-light); text-align: center; padding: 2rem;">No expense data for this client.</span>
+            }
+            else
+            {
+                @foreach (var cb in categoryBreakdown)
+                {
+                    double pct = cb.Percentage;
+                    string barColor = cb.Category == "Housing" ? "#1e293b" : cb.Category == "Food" ? "#0bb5a2" : "#94a3b8";
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem;">
+                            <span>@cb.Category</span>
+                            <span>@Math.Round(pct, 0)%</span>
+                        </div>
+                        <div class="progress-container" style="margin-top: 0; background-color: #f1f3f7; height: 8px;">
+                            <div class="progress-bar" style="width: @(pct)%; background-color: @barColor; height: 100%;"></div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Savings Goals and Recommendations Section Grid -->
+<div class="charts-section-grid">
+    <!-- Savings Goals -->
+    <div class="content-card">
+        <div class="card-header-flex" style="margin-bottom: 1.5rem;">
+            <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Savings Goals Progress</h3>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            @if (goals.Count == 0)
+            {
+                <span style="color: var(--text-light); text-align: center; padding: 2rem;">No active savings goals for this client.</span>
+            }
+            else
+            {
+                @foreach (var goal in goals)
+                {
+                    double goalPct = goal.TargetAmount > 0 ? (double)(goal.CurrentAmount / goal.TargetAmount) * 100 : 0;
+                    <div style="display: flex; align-items: center; gap: 1.5rem; border: 1px solid var(--border-color); padding: 1rem; border-radius: 14px;">
+                        <div style="position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; color: #0f766e; background-color: #e0f2fe; border-radius: 50%;">
+                            @Math.Round(goalPct, 0)%
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                            <span style="font-weight: 700; font-size: 0.95rem;">@goal.GoalName</span>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">@CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", goal.CurrentAmount) / @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", goal.TargetAmount)</span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Recommendations Manager -->
+    <div class="content-card">
+        <div class="card-header-flex" style="margin-bottom: 1.25rem;">
+            <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Advisor Recommendations</h3>
+        </div>
+
+        @if (recommendations.Count > 0)
+        {
+            <div class="dark-advice-card" style="margin-top: 0; margin-bottom: 1.5rem;">
+                <div class="dark-advice-header">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Last Recommendation
+                </div>
+                <div class="dark-advice-text">
+                    @recommendations.First().Text
+                </div>
+                <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 0.5rem; text-align: right;">
+                    Posted @recommendations.First().CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                </div>
+            </div>
+        }
+
+        <form action="@Url.Action("PostRecommendation", "Advisor")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="clientId" value="@(selectedClient?.UserId ?? 0)" />
+            <div class="form-group">
+                <label>New Recommendation</label>
+                <textarea name="text" class="form-control" style="height: 90px; padding: 0.75rem;" placeholder="Suggest budget shifts, alert on spike spendings, or suggest saving actions..." required></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Post Recommendation</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const ctx = document.getElementById('clientTrendsChart').getContext('2d');
+
+            const weekly = {
+                labels: @Html.Raw(Json.Serialize(ViewBag.WeekLabels)),
+                data: @Html.Raw(Json.Serialize(ViewBag.WeekAmounts)),
+                range: 'LAST 8 WEEKS', avg: 'Average Weekly Spend', change: 'WoW Change'
+            };
+            const monthly = {
+                labels: @Html.Raw(Json.Serialize(ViewBag.TrendLabels)),
+                data: @Html.Raw(Json.Serialize(ViewBag.TrendAmounts)),
+                range: 'LAST 6 MONTHS', avg: 'Average Monthly Spend', change: 'MoM Change'
+            };
+
+            function money(n) {
+                return '@Html.Raw(CurrencyHelper.Symbol(Context)) ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{ data: [], backgroundColor: '#0bb5a2', borderRadius: 4, barThickness: 22 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: function (c) { return money(c.parsed.y); } } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f3f7' }, ticks: { color: '#94a3b8', font: { size: 9 } } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+                    }
+                }
+            });
+
+            function show(mode) {
+                const src = mode === 'weekly' ? weekly : monthly;
+                chart.data.labels = src.labels;
+                chart.data.datasets[0].data = src.data;
+                chart.update();
+
+                document.getElementById('trendRange').textContent = src.range;
+                document.getElementById('avgLabel').textContent = src.avg;
+                document.getElementById('changeLabel').textContent = src.change;
+
+                const total = src.data.reduce(function (a, b) { return a + b; }, 0);
+                document.getElementById('avgValue').textContent = money(src.data.length ? total / src.data.length : 0);
+
+                const changeEl = document.getElementById('changeValue');
+                const n = src.data.length;
+                const last = n > 0 ? src.data[n - 1] : 0;
+                const prev = n > 1 ? src.data[n - 2] : 0;
+                if (prev > 0) {
+                    const pct = ((last - prev) / prev) * 100;
+                    changeEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+                    changeEl.style.color = pct > 0 ? '#dc2626' : '#16a34a';   // more spending = red, less = green
+                } else {
+                    changeEl.textContent = '-';
+                    changeEl.style.color = '#64748b';
+                }
+
+                const wBtn = document.getElementById('btnWeekly');
+                const mBtn = document.getElementById('btnMonthly');
+                const on = function (b) { b.style.background = '#4f46e5'; b.style.color = '#fff'; b.style.borderColor = '#4f46e5'; };
+                const off = function (b) { b.style.background = '#fff'; b.style.color = '#4338ca'; b.style.borderColor = '#c7d2fe'; };
+                if (mode === 'weekly') { on(wBtn); off(mBtn); } else { on(mBtn); off(wBtn); }
+            }
+
+            document.getElementById('btnWeekly').addEventListener('click', function () { show('weekly'); });
+            document.getElementById('btnMonthly').addEventListener('click', function () { show('monthly'); });
+            show('weekly');
+        });
+    </script>
+}

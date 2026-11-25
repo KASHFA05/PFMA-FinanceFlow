@@ -1,0 +1,31 @@
+HOW TO PUT FINANCEFLOW (PFMA) ONLINE
+====================================
+Currently the app uses SQL Server LocalDB (runs only on your own computer). To use it online:
+
+1. Get a hosting + SQL Server database
+   Any ASP.NET Core 8 host works, for example Azure App Service + Azure SQL, SmarterASP.NET,
+   or an IIS Windows server.
+
+2. Put the online database details in PFMA/appsettings.Production.json
+   (replace YOUR_SQL_SERVER, YOUR_DB_USER, YOUR_DB_PASSWORD).
+   Alternative (more secure): set the environment variable
+       ConnectionStrings__DefaultConnection
+   on the hosting panel instead of writing the password in the file.
+
+3. Publish
+   In Visual Studio: right-click the PFMA project > Publish > choose your host.
+   Or from a terminal inside the PFMA folder:
+       dotnet publish -c Release -o publish
+   Upload the "publish" folder to the host.
+
+4. First run
+   The database tables are created automatically on first start (including demo data).
+   Immediately log in as admin (admin@financeflow.com / admin123) and change the password
+   from Profile, and delete or change the other demo accounts.
+
+5. Phone app
+   Once the site runs on https, open it on a phone and choose "Add to Home screen" to install it
+   like an app (PWA).
+
+Note: in Production the app never deletes/re-creates the database by itself. If you later change
+the models, update the database structure yourself (or create a new empty database).

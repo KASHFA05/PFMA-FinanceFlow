@@ -1,0 +1,187 @@
+@model List<PFMA.Models.User>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="cf-head">
+    <div>
+        <h2 class="cf-title"><i class="fa-solid fa-gauge-high"></i> Admin Control Panel</h2>
+        <div class="cf-sub">System-wide monitoring, registered users management, and platform analytics.</div>
+    </div>
+    <span class="cf-badge blue" style="padding:0.45rem 1rem;"><i class="fa-solid fa-location-dot"></i> Role: Administrator</span>
+</div>
+
+<div class="cf-stats">
+    <div class="cf-stat blue"><div class="label">Total Users</div><div class="value">@String.Format("{0:N0}", ViewBag.TotalUsers)</div><div class="note"><i class="fa-solid fa-arrow-trend-up"></i> +5.2% this month</div></div>
+    <div class="cf-stat green"><div class="label">Active Sessions</div><div class="value">@String.Format("{0:N0}", ViewBag.ActiveSessions)</div><div class="note"><i class="fa-solid fa-circle" style="color:#10b981; font-size:0.6rem;"></i> Live Now</div></div>
+    <div class="cf-stat amber"><div class="label">Transactions</div><div class="value">@String.Format("{0:N0}", ViewBag.TotalTransactions)</div><div class="note"><i class="fa-solid fa-arrow-trend-up"></i> +12% growth</div></div>
+    <div class="cf-stat purple"><div class="label">System Status</div><div class="value" style="color:#4f46e5;">@ViewBag.SystemStatus</div><div class="note">Uptime: @ViewBag.Uptime</div></div>
+</div>
+
+<div>
+    <div class="cf-panel">
+        <h3><i class="fa-solid fa-users"></i> User Management &amp; Details</h3>
+        <div style="font-size:0.8rem; color:var(--text-secondary); margin:-0.5rem 0 1rem;">Click a user (or "View Details") to open all of that user's pages: transactions, budgets, goals, bills and debts.</div>
+        <div class="cf-table-wrap" style="box-shadow:none; padding:0;">
+            <table class="cf-table">
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th class="right">Action</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        string roleClass = user.Role == "Admin" ? "admin" : (user.Role == "Advisor" ? "advisor" : "user");
+                        <tr>
+                            <td style="font-weight:700; color:#4338ca;">#@(1020 + user.UserId)</td>
+                            <td style="font-weight:700;"><a href="@Url.Action("UserDetails", "Admin", new { id = user.UserId })" style="color:#1e2a52;">@user.Name</a></td>
+                            <td>@user.Email</td>
+                            <td><span class="cf-badge @roleClass">@user.Role</span></td>
+                            <td><div class="actions"><a class="cf-btn sm" href="@Url.Action("UserDetails", "Admin", new { id = user.UserId })"><i class="fa-regular fa-eye"></i> View Details</a></div></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top:1rem; font-size:0.8rem; color:var(--text-secondary);">Showing @Model.Count registered user(s) in the database.</div>
+    </div>
+
+    <!-- Platform flow: all users, daily / weekly / monthly -->
+    <div class="cf-panel" style="margin-top:1.5rem; border:1px solid rgba(6,182,212,.25); box-shadow:0 8px 30px rgba(6,182,212,.12);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.75rem; margin-bottom:.5rem;">
+            <h3 style="margin:0;"><i class="fa-solid fa-chart-line"></i> Platform Flow</h3>
+            <div class="toggle-group">
+                <button type="button" class="toggle-btn" data-flow="daily" style="cursor:pointer;">Daily</button>
+                <button type="button" class="toggle-btn active" data-flow="weekly" style="cursor:pointer;">Weekly</button>
+                <button type="button" class="toggle-btn" data-flow="monthly" style="cursor:pointer;">Monthly</button>
+            </div>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:.5rem;">Income and expenses of all users, with the number of transactions (bars, right axis).</div>
+        <div style="height:300px; position:relative;">
+            <canvas id="adminFlowChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const flow = @Html.Raw(Json.Serialize(ViewBag.AdminFlow));
+            const ctx = document.getElementById('adminFlowChart').getContext('2d');
+
+            const glowPlugin = {
+                id: 'glow',
+                beforeDatasetDraw: function (chart, args) {
+                    const ds = chart.data.datasets[args.index];
+                    if (ds.glow) { chart.ctx.save(); chart.ctx.shadowColor = ds.glow; chart.ctx.shadowBlur = ds.glowBlur || 14; }
+                },
+                afterDatasetDraw: function (chart, args) {
+                    const ds = chart.data.datasets[args.index];
+                    if (ds.glow) chart.ctx.restore();
+                }
+            };
+
+            const arrowPlugin = {
+                id: 'arrowHead',
+                afterDatasetsDraw: function (chart) {
+                    chart.data.datasets.forEach(function (ds, i) {
+                        if (!ds.arrow) return;
+                        const pts = chart.getDatasetMeta(i).data;
+                        if (pts.length < 2) return;
+                        const last = pts[pts.length - 1];
+                        const prev = pts[pts.length - 2];
+                        const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
+                        const size = 13;
+                        const c = chart.ctx;
+                        c.save();
+                        c.translate(last.x, last.y);
+                        c.rotate(angle);
+                        c.shadowColor = ds.borderColor;
+                        c.shadowBlur = 16;
+                        c.strokeStyle = ds.borderColor;
+                        c.lineWidth = 2.5;
+                        c.lineJoin = 'round';
+                        c.beginPath();
+                        c.moveTo(size, 0);
+                        c.lineTo(-size * 0.6, -size * 0.75);
+                        c.lineTo(-size * 0.6, size * 0.75);
+                        c.closePath();
+                        c.stroke();
+                        c.restore();
+                    });
+                }
+            };
+
+            function barGradient(context) {
+                const chart = context.chart;
+                const area = chart.chartArea;
+                if (!area) return 'rgba(99,102,241,.7)';
+                const g = chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+                g.addColorStop(0, 'rgba(99,102,241,.9)');
+                g.addColorStop(1, 'rgba(99,102,241,.08)');
+                return g;
+            }
+
+            function areaGradient(context) {
+                const chart = context.chart;
+                const area = chart.chartArea;
+                if (!area) return 'rgba(6,182,212,.1)';
+                const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+                g.addColorStop(0, 'rgba(6,182,212,.25)');
+                g.addColorStop(1, 'rgba(6,182,212,0)');
+                return g;
+            }
+
+            const first = flow.weekly;
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: first.labels,
+                    datasets: [
+                        { type: 'bar', label: 'Transactions', data: first.count, yAxisID: 'yCount', backgroundColor: barGradient, borderRadius: 3, barPercentage: 0.35, categoryPercentage: 0.9, order: 3 },
+                        { type: 'line', label: 'Expenses', data: first.expense, borderColor: '#14b8a6', borderWidth: 1.8, cubicInterpolationMode: 'monotone', pointRadius: 0, fill: false, glow: 'rgba(20,184,166,.55)', glowBlur: 8, order: 2 },
+                        { type: 'line', label: 'Income', data: first.income, borderColor: '#06b6d4', borderWidth: 3.5, cubicInterpolationMode: 'monotone', fill: true, backgroundColor: areaGradient, pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: '#06b6d4', glow: 'rgba(6,182,212,.7)', glowBlur: 14, arrow: true, order: 1 }
+                    ]
+                },
+                plugins: [glowPlugin, arrowPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 1600, easing: 'easeOutQuart' },
+                    layout: { padding: { right: 18, top: 8 } },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', align: 'start', labels: { color: '#475569', usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 10 } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(3,21,38,.95)', borderColor: 'rgba(34,211,238,.5)', borderWidth: 1, titleColor: '#fff', bodyColor: '#bdeeff',
+                            callbacks: {
+                                label: function (c) {
+                                    if (c.dataset.label === 'Transactions') return ' Transactions: ' + c.parsed.y;
+                                    return ' ' + c.dataset.label + ': @Html.Raw(CurrencyHelper.Symbol(Context)) ' + Number(c.parsed.y).toLocaleString('en-US');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#e5e7eb', borderDash: [3, 5] }, border: { color: '#cbd5e1' }, ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } } },
+                        yCount: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, border: { color: '#cbd5e1' }, ticks: { color: '#6366f1', precision: 0, font: { family: 'Inter', size: 10 } } },
+                        x: { grid: { color: '#f1f5f9', borderDash: [3, 5] }, border: { color: '#cbd5e1' }, ticks: { color: '#64748b', maxRotation: 0, autoSkip: true, maxTicksLimit: 10, font: { family: 'Inter', size: 10 } } }
+                    }
+                }
+            });
+
+            const buttons = Array.prototype.slice.call(document.querySelectorAll('[data-flow]'));
+            function show(mode) {
+                const s = flow[mode];
+                chart.data.labels = s.labels;
+                chart.data.datasets[0].data = s.count;
+                chart.data.datasets[1].data = s.expense;
+                chart.data.datasets[2].data = s.income;
+                chart.update();
+                buttons.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-flow') === mode); });
+            }
+            buttons.forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-flow')); }); });
+        });
+    </script>
+}

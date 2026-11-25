@@ -1,0 +1,272 @@
+@model PFMA.Models.User
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Profile Settings";
+}
+
+<!-- Top Profile Header Card -->
+<div class="profile-card-top">
+    <div class="profile-img-container">
+        <img src="@(Model.ProfilePictureUrl ?? "")" alt="@Model.Name" class="profile-avatar-lg" id="profile-avatar-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22 fill=%22%230bb5a2%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22/><text x=%2250%25%22 y=%2255%25%22 font-family=%22sans-serif%22 font-size=%2240%22 fill=%22white%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>@(Model.Name != null && Model.Name.Length > 0 ? Model.Name.Substring(0, 1).ToUpper() : "U")</text></svg>';" />
+        <div class="profile-edit-badge" onclick="document.getElementById('avatar-file-input').click();" style="cursor: pointer;">
+            <i class="fa-solid fa-pen"></i>
+        </div>
+        <input type="file" id="avatar-file-input" accept="image/*" style="display: none;" onchange="uploadAvatar(this);" />
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: flex-start;">
+        <h2 class="profile-title">@Model.Name</h2>
+        <span class="profile-subtitle">@Model.Email</span>
+        <span class="profile-tag">@Model.AccountType Account</span>
+    </div>
+</div>
+
+<!-- Forms and Settings Panels -->
+<div class="charts-section-grid">
+    <!-- Change Password Form -->
+    <div class="content-card">
+        <div class="card-header-flex" style="margin-bottom: 1.5rem;">
+            <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;"><i class="fa-solid fa-rotate-left"></i> Change Password</h3>
+        </div>
+
+        @if (ViewBag.Message != null)
+        {
+            <div class="alert-banner" style="background-color: var(--success-bg); color: var(--success); border-color: #a7f3d0; margin-bottom: 1.5rem; padding: 0.75rem;">
+                <i class="fa-regular fa-circle-check"></i>
+                <span>@ViewBag.Message</span>
+            </div>
+        }
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert-banner" style="background-color: var(--danger-bg); color: var(--danger); border-color: #fecaca; margin-bottom: 1.5rem; padding: 0.75rem;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>@ViewBag.Error</span>
+            </div>
+        }
+
+        <form action="@Url.Action("ChangePassword", "Profile")" method="post">
+            @Html.AntiForgeryToken()
+            
+            <div class="form-group">
+                <label>Current Password</label>
+                <div class="form-control-wrapper">
+                    <input type="password" id="curr-pwd" name="currentPassword" class="form-control" placeholder="••••••••" required />
+                    <i class="fa-regular fa-eye" id="toggle-curr-pwd" style="left: auto; right: 1rem; cursor: pointer;"></i>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label>New Password</label>
+                <div class="form-control-wrapper">
+                    <input type="password" id="new-pwd" name="newPassword" class="form-control" placeholder="••••••••" required />
+                    <i class="fa-regular fa-eye" id="toggle-new-pwd" style="left: auto; right: 1rem; cursor: pointer;"></i>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="background-color: #0bb5a2; padding: 0.85rem; font-size: 0.85rem; font-weight: 600;">
+                UPDATE PASSWORD
+            </button>
+        </form>
+    </div>
+
+    <!-- Currency Preference -->
+    <div class="content-card">
+        <div class="card-header-flex" style="margin-bottom: 1.5rem;">
+            <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;"><i class="fa-solid fa-coins"></i> Currency</h3>
+        </div>
+        @if (TempData["CurrencyMessage"] != null)
+        {
+            <div class="alert-banner" style="background-color: var(--success-bg); color: var(--success); border-color: #a7f3d0; margin-bottom: 1.5rem; padding: 0.75rem;">
+                <i class="fa-regular fa-circle-check"></i>
+                <span>@TempData["CurrencyMessage"]</span>
+            </div>
+        }
+        <form action="@Url.Action("SetCurrency", "Profile")" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label>Display currency</label>
+                @{ var currentCurrency = CurrencyHelper.Code(Context); }
+                <select name="currency" class="form-control">
+                    @foreach (var cur in CurrencyHelper.All)
+                    {
+                        <option value="@cur.Code" selected="@(cur.Code == currentCurrency)">@cur.Name</option>
+                    }
+                </select>
+                <small style="color: var(--text-secondary); font-size: 0.75rem;">Amounts are shown with this currency symbol (PDF reports too). No conversion is applied.</small>
+            </div>
+            <button type="submit" class="btn-primary" style="background-color: #0bb5a2; padding: 0.85rem; font-size: 0.85rem; font-weight: 600;">
+                SAVE CURRENCY
+            </button>
+        </form>
+    </div>
+
+    <!-- Security & Privacy Settings -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Security Toggles -->
+        <div class="content-card">
+            <div class="card-header-flex" style="margin-bottom: 1.5rem;">
+                <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;"><i class="fa-solid fa-shield-halved"></i> Security Settings</h3>
+            </div>
+
+            <div class="toggle-switch-group">
+                <!-- Toggle 1: 2FA -->
+                <div class="switch-item">
+                    <div class="switch-label">
+                        <span class="switch-title">Two-Factor Authentication</span>
+                        <span class="switch-description">Add an extra layer of security to your account.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="chk-2fa" @(Model.TwoFactorEnabled ? "checked" : "") onchange="saveSecuritySettings()" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Toggle 2: Notifications -->
+                <div class="switch-item">
+                    <div class="switch-label">
+                        <span class="switch-title">Email Notifications</span>
+                        <span class="switch-description">Receive weekly financial reports and tips.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="chk-notif" @(Model.EmailNotificationsEnabled ? "checked" : "") onchange="saveSecuritySettings()" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Toggle 3: Login Alerts -->
+                <div class="switch-item">
+                    <div class="switch-label">
+                        <span class="switch-title">Login Alerts</span>
+                        <span class="switch-description">Get notified of any login attempt from new devices.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="chk-alerts" @(Model.LoginAlertsEnabled ? "checked" : "") onchange="saveSecuritySettings()" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Privacy (Data Deletion) -->
+        <div class="content-card" style="border-color: #fee2e2;">
+            <div class="card-header-flex" style="margin-bottom: 1rem;">
+                <h3 class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: #b91c1c; letter-spacing: 0.5px;"><i class="fa-solid fa-triangle-exclamation"></i> Account Privacy</h3>
+            </div>
+            
+            <form action="@Url.Action("RequestDeletion", "Profile")" method="post" id="delete-account-form" onsubmit="return confirm('WARNING: This will permanently delete your FinanceFlow account and all transaction histories. This action CANNOT be undone. Are you sure you want to proceed?');">
+                @Html.AntiForgeryToken()
+                <div class="privacy-danger-card" onclick="triggerAccountDeletion()">
+                    <span class="privacy-danger-title">Data Deletion Request</span>
+                    <i class="fa-solid fa-chevron-right" style="color: #ef4444;"></i>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Password fields show/hide toggles
+        function registerPasswordToggle(inputId, toggleId) {
+            const pwdInput = document.getElementById(inputId);
+            const toggleBtn = document.getElementById(toggleId);
+            if (pwdInput && toggleBtn) {
+                toggleBtn.addEventListener("click", () => {
+                    if (pwdInput.type === "password") {
+                        pwdInput.type = "text";
+                        toggleBtn.classList.remove("fa-eye");
+                        toggleBtn.classList.add("fa-eye-slash");
+                    } else {
+                        pwdInput.type = "password";
+                        toggleBtn.classList.remove("fa-eye-slash");
+                        toggleBtn.classList.add("fa-eye");
+                    }
+                });
+            }
+        }
+
+        registerPasswordToggle("curr-pwd", "toggle-curr-pwd");
+        registerPasswordToggle("new-pwd", "toggle-new-pwd");
+
+        // Submit security toggles via AJAX
+        function saveSecuritySettings() {
+            const twoFactor = document.getElementById("chk-2fa").checked;
+            const emailNotif = document.getElementById("chk-notif").checked;
+            const loginAlerts = document.getElementById("chk-alerts").checked;
+
+            const url = "@Url.Action("UpdateSecurity", "Profile")";
+
+            fetch(url + `?twoFactor=${twoFactor}&emailNotif=${emailNotif}&loginAlerts=${loginAlerts}`, {
+                method: "POST"
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log("Settings synchronized successfully.");
+                } else {
+                    alert("Error: Settings synchronization failed.");
+                }
+            })
+            .catch(error => {
+                console.error("AJAX Error:", error);
+            });
+        }
+
+        // Trigger account deletion form submit
+        function triggerAccountDeletion() {
+            const form = document.getElementById("delete-account-form");
+            if (form) {
+                // Trigger form submission which shows the confirmation alert
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        }
+
+        // Upload Profile Avatar
+        function uploadAvatar(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                
+                // Client-side size check (2 MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert("Error: File size cannot exceed 2 MB.");
+                    input.value = '';
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("avatar", file);
+
+                const url = "@Url.Action("UploadAvatar", "Profile")";
+
+                fetch(url, {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update Profile Page Avatar
+                        const profileAvatar = document.getElementById("profile-avatar-img");
+                        if (profileAvatar) {
+                            profileAvatar.src = data.url;
+                        }
+                        
+                        // Update Header/Layout Avatar
+                        const headerAvatars = document.querySelectorAll(".user-avatar");
+                        headerAvatars.forEach(img => {
+                            img.src = data.url;
+                        });
+                    } else {
+                        alert("Upload failed: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Upload AJAX Error:", error);
+                    alert("An error occurred while uploading the file.");
+                })
+                .finally(() => {
+                    input.value = '';
+                });
+            }
+        }
+    </script>
+}

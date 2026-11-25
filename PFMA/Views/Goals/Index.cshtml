@@ -1,0 +1,102 @@
+@model List<PFMA.Models.SavingsGoal>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Savings Goals";
+    string[] colors = { "c-blue", "c-green", "c-purple", "c-amber", "c-teal", "c-pink" };
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="cf-head">
+    <div>
+        <h2 class="cf-title"><i class="fa-solid fa-piggy-bank"></i> Savings Goals</h2>
+        <div class="cf-sub">Track what you are saving for. Total saved: <strong>@CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", ViewBag.TotalSaved)</strong> across @ViewBag.GoalsCount goal(s).</div>
+    </div>
+    <button type="button" class="cf-add-btn" data-open="goal-add-modal"><i class="fa-solid fa-plus"></i> Add New Goal</button>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="cf-empty">No savings goals yet. Click "Add New Goal" to create your first one!</div>
+}
+else
+{
+    <div class="cf-grid">
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            var g = Model[i];
+            double pct = g.TargetAmount > 0 ? (double)(g.CurrentAmount / g.TargetAmount) * 100 : 0;
+            double barPct = Math.Min(100, Math.Max(0, pct));
+            bool done = pct >= 100;
+            <div class="cf-card @colors[i % colors.Length]">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <h3 class="cf-card-title">@g.GoalName</h3>
+                    <i class="fa-solid @(done ? "fa-circle-check" : "fa-shield-halved")" style="font-size:1.3rem; color:@(done ? "#10b981" : "#6366f1");"></i>
+                </div>
+                <div class="cf-meta"><i class="fa-regular fa-calendar"></i> Target: @(g.TargetDate.HasValue ? g.TargetDate.Value.ToString("dd MMM yyyy") : "No date")</div>
+                <div class="cf-row">
+                    <span>Saved: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", g.CurrentAmount)</span>
+                    <span>Target: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", g.TargetAmount)</span>
+                </div>
+                <div class="cf-progress"><div style="width: @(barPct.ToString("0.##", inv))%;"></div></div>
+                <div class="cf-percent">@pct.ToString("0.0", inv)% Achieved</div>
+                <div class="cf-actions">
+                    <button type="button" class="cf-btn success" data-open="goal-money-modal" data-fill-goalid="@g.GoalId" data-text-name="@g.GoalName"><i class="fa-solid fa-coins"></i> Add Money</button>
+                    <button type="button" class="cf-btn" data-open="goal-edit-modal"
+                            data-fill-goalid="@g.GoalId" data-fill-goalname="@g.GoalName" data-fill-targetamount="@g.TargetAmount.ToString("0.##", inv)"
+                            data-fill-currentamount="@g.CurrentAmount.ToString("0.##", inv)" data-fill-targetdate="@(g.TargetDate.HasValue ? g.TargetDate.Value.ToString("yyyy-MM-dd") : "")">
+                        <i class="fa-regular fa-pen-to-square"></i> Edit
+                    </button>
+                    <form action="@Url.Action("DeleteGoal", "Goals")" method="post" onsubmit="return confirm('Delete this goal?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="goalId" value="@g.GoalId" />
+                        <button type="submit" class="cf-btn danger"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Add goal -->
+<div class="modal-overlay" id="goal-add-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Add New Goal</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("AddGoal", "Goals")" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group"><label>Goal Name</label><input type="text" name="goalName" class="form-control" placeholder="e.g. New Laptop" required /></div>
+            <div class="form-group"><label>Target Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="targetAmount" class="form-control" required /></div>
+            <div class="form-group"><label>Already Saved (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="0" name="currentAmount" class="form-control" value="0" /></div>
+            <div class="form-group"><label>Target Date</label><input type="date" name="targetDate" class="form-control" /></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Goal</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit goal -->
+<div class="modal-overlay" id="goal-edit-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Edit Goal</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("EditGoal", "Goals")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="goalId" data-field="goalid" />
+            <div class="form-group"><label>Goal Name</label><input type="text" name="goalName" data-field="goalname" class="form-control" required /></div>
+            <div class="form-group"><label>Target Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="targetAmount" data-field="targetamount" class="form-control" required /></div>
+            <div class="form-group"><label>Saved Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="0" name="currentAmount" data-field="currentamount" class="form-control" required /></div>
+            <div class="form-group"><label>Target Date</label><input type="date" name="targetDate" data-field="targetdate" class="form-control" /></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Update Goal</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Add money -->
+<div class="modal-overlay" id="goal-money-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Add Money to <span data-text="name"></span></h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("AddMoney", "Goals")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="goalId" data-field="goalid" />
+            <div class="form-group"><label>Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="amount" class="form-control" required /></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Add Money</button></div>
+        </form>
+    </div>
+</div>

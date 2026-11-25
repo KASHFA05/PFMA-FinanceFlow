@@ -1,0 +1,322 @@
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    var userId = HttpContextAccessor.HttpContext?.Session.GetInt32("UserId");
+    var userName = HttpContextAccessor.HttpContext?.Session.GetString("UserName") ?? "Guest";
+    var userEmail = HttpContextAccessor.HttpContext?.Session.GetString("UserEmail") ?? "";
+    var userRole = HttpContextAccessor.HttpContext?.Session.GetString("UserRole") ?? "";
+    var userAvatar = HttpContextAccessor.HttpContext?.Session.GetString("ProfilePicture") ?? "/images/default-avatar.png";
+
+    // Determine current controller/action for active states
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FinanceFlow</title>
+    <!-- Installable mobile app (PWA) -->
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="FinanceFlow" />
+    <link rel="apple-touch-icon" href="~/images/icon-192.png" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/colorful.css" asp-append-version="true" />
+    <!-- FontAwesome for Premium Vector Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <!-- Chart.js for Beautiful Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    @if (userId == null)
+    {
+        // Render auth page layout (no sidebar)
+        @RenderBody()
+    }
+    else
+    {
+        <div class="app-container">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar" id="sidebar">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <i class="fa-solid fa-building-columns"></i>
+                    </div>
+                    <span>FinanceFlow</span>
+                </div>
+
+                <nav style="display:contents;">
+                    <ul class="nav-menu">
+                        @if (userRole == "User")
+                        {
+                            <li class="nav-item @(currentController == "Home" && currentAction == "Index" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Home")">
+                                    <i class="fa-solid fa-house"></i>
+                                    <span>Home</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "Home" && currentAction == "Transactions" ? "active" : "")">
+                                <a href="@Url.Action("Transactions", "Home")">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>Transactions</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "Categories" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Categories")">
+                                    <i class="fa-solid fa-tags"></i>
+                                    <span>Categories</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "Goals" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Goals")">
+                                    <i class="fa-solid fa-piggy-bank"></i>
+                                    <span>Savings Goals</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "Bills" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Bills")">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                    <span>Bills</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "BillQRCode" ? "active" : "")">
+                                <a href="@Url.Action("Index", "BillQRCode")">
+                                    <i class="fa-solid fa-qrcode"></i>
+                                    <span>Bill QR Code</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "Debts" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Debts")">
+                                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                                    <span>Debt Tracker</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "Budgets" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Budgets")">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    <span>Budgets</span>
+                                </a>
+                            </li>
+                            <li class="nav-item @(currentController == "Home" && currentAction == "Reports" ? "active" : "")">
+                                <a href="@Url.Action("Reports", "Home")">
+                                    <i class="fa-solid fa-chart-simple"></i>
+                                    <span>Analytics</span>
+                                </a>
+                            </li>
+                        }
+                        else if (userRole == "Advisor")
+                        {
+                            <li class="nav-item @(currentController == "Advisor" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Advisor")">
+                                    <i class="fa-solid fa-user-tie"></i>
+                                    <span>Advisor Dashboard</span>
+                                </a>
+                            </li>
+                        }
+                        else if (userRole == "Admin")
+                        {
+                            <li class="nav-item @(currentController == "Admin" ? "active" : "")">
+                                <a href="@Url.Action("Index", "Admin")">
+                                    <i class="fa-solid fa-gauge-high"></i>
+                                    <span>Admin Panel</span>
+                                </a>
+                            </li>
+                        }
+
+                        <li class="nav-item @(currentController == "Profile" ? "active" : "")">
+                            <a href="@Url.Action("Index", "Profile")">
+                                <i class="fa-solid fa-user-gear"></i>
+                                <span>Profile</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <img src="@userAvatar" alt="@userName" class="user-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22 fill=%22%230bb5a2%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22/><text x=%2250%25%22 y=%2255%25%22 font-family=%22sans-serif%22 font-size=%2240%22 fill=%22white%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>@(userName != null && userName.Length > 0 ? userName.Substring(0, 1).ToUpper() : "U")</text></svg>';" />
+                    <div class="user-info">
+                        <span class="user-name">@userName</span>
+                        <span class="user-email">@userEmail</span>
+                    </div>
+                    <a href="@Url.Action("Logout", "Account")" class="bill-btn" style="margin-left: auto;" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Main Panel Area -->
+            <div class="main-wrapper">
+                <!-- Top Header Bar -->
+                <header class="header">
+                    <div class="header-left">
+                        <button class="menu-toggle" id="menu-toggle">
+                            <i class="fa-solid fa-bars"></i>
+                        </button>
+                        @if (userRole == "User" && currentController == "Home" && currentAction == "Transactions")
+                        {
+                            <!-- Let the specific views handle inner header items if needed -->
+                        }
+                        else
+                        {
+                            <div class="search-bar">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" placeholder="Search activities..." />
+                            </div>
+                        }
+                    </div>
+
+                    <div class="header-right">
+                        <button class="notif-btn">
+                            <i class="fa-regular fa-bell"></i>
+                            <span class="notif-badge"></span>
+                        </button>
+                        <i class="fa-solid fa-circle-user" style="font-size: 1.5rem; color: var(--text-secondary);"></i>
+                    </div>
+                </header>
+
+                <!-- Page Inner Body Content -->
+                <main class="content-body">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    }
+
+    <!-- Add Transaction Modal Component (Rendered for User accounts) -->
+    @if (userRole == "User")
+    {
+        <div class="modal-overlay" id="add-transaction-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="card-title">Add Transaction</h3>
+                    <button class="modal-close" id="modal-close-btn">&times;</button>
+                </div>
+                <form action="@Url.Action("AddTransaction", "Home")" method="post">
+                    @Html.AntiForgeryToken()
+                    
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" step="0.01" name="Amount" class="form-control" placeholder="@CurrencyHelper.Symbol(Context) 0.00" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Type</label>
+                        <div class="toggle-group" style="width: 100%;">
+                            <button type="button" class="toggle-btn active" id="btn-expense" style="flex:1;">Expense</button>
+                            <button type="button" class="toggle-btn" id="btn-income" style="flex:1;">Income</button>
+                        </div>
+                        <input type="hidden" name="Type" id="transaction-type-input" value="Expense" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="Category" class="form-control" required>
+                            <option value="">Select Category</option>
+                            <option value="Food">Food</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Bills">Bills</option>
+                            <option value="Housing">Housing</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Misc">Misc</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" name="Date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" name="Description" class="form-control" placeholder="e.g. Weekly Groceries" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes (Optional)</label>
+                        <textarea name="Notes" class="form-control" style="height: 80px;" placeholder="Add additional details..."></textarea>
+                    </div>
+
+                    <div class="modal-btn-row">
+                        <button type="button" class="btn-secondary" id="modal-cancel-btn">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Transaction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Float Action Button -->
+        <button class="fab" id="open-transaction-modal-btn">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    }
+
+    <!-- UI Interaction Scripts -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Sidebar Mobile Toggle
+            const menuToggle = document.getElementById("menu-toggle");
+            const sidebar = document.getElementById("sidebar");
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener("click", () => {
+                    sidebar.classList.toggle("active");
+                });
+            }
+
+            // Modal Interactions
+            const openModalBtn = document.getElementById("open-transaction-modal-btn");
+            const closeModalBtn = document.getElementById("modal-close-btn");
+            const cancelModalBtn = document.getElementById("modal-cancel-btn");
+            const modal = document.getElementById("add-transaction-modal");
+
+            if (openModalBtn && modal) {
+                openModalBtn.addEventListener("click", () => {
+                    modal.classList.add("active");
+                });
+            }
+
+            const hideModal = () => {
+                if (modal) modal.classList.remove("active");
+            };
+
+            if (closeModalBtn) closeModalBtn.addEventListener("click", hideModal);
+            if (cancelModalBtn) cancelModalBtn.addEventListener("click", hideModal);
+
+            // Modal segment toggle (Income/Expense)
+            const btnExpense = document.getElementById("btn-expense");
+            const btnIncome = document.getElementById("btn-income");
+            const typeInput = document.getElementById("transaction-type-input");
+
+            if (btnExpense && btnIncome && typeInput) {
+                btnExpense.addEventListener("click", () => {
+                    btnExpense.classList.add("active");
+                    btnIncome.classList.remove("active");
+                    typeInput.value = "Expense";
+                });
+
+                btnIncome.addEventListener("click", () => {
+                    btnIncome.classList.add("active");
+                    btnExpense.classList.remove("active");
+                    typeInput.value = "Income";
+                });
+            }
+        });
+    </script>
+    
+    <script>
+        // Register the service worker so the site can be installed on a phone ("Add to Home screen")
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+            window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () { }); });
+        }
+    </script>
+    <script src="~/js/colorful.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

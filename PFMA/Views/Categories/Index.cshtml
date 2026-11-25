@@ -1,0 +1,80 @@
+@model List<PFMA.Models.Category>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Manage Categories";
+    var icons = new[]
+    {
+        "fa-mug-hot", "fa-utensils", "fa-car", "fa-bolt", "fa-cart-shopping", "fa-house", "fa-film", "fa-heart-pulse",
+        "fa-book", "fa-dumbbell", "fa-plane", "fa-gift", "fa-shirt", "fa-piggy-bank", "fa-money-bill-wave", "fa-laptop-code", "fa-tag"
+    };
+}
+
+<div class="cf-head">
+    <div>
+        <h2 class="cf-title"><i class="fa-solid fa-tags"></i> Manage Categories</h2>
+        <div class="cf-sub">Create your own income and expense categories with icons.</div>
+    </div>
+    <button type="button" class="cf-add-btn" data-open="cat-add-modal"><i class="fa-solid fa-plus"></i> Add New Category</button>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="cf-empty">No categories yet.</div>
+}
+else
+{
+    <div class="cf-cat-grid">
+        @foreach (var c in Model)
+        {
+            string cls = c.Type == "Income" ? "income" : "expense";
+            <div class="cf-cat @cls">
+                <span class="cf-badge @cls">@c.Type</span>
+                <div class="icon"><i class="fa-solid @c.Icon"></i></div>
+                <div class="name">@c.Name</div>
+                <div class="actions">
+                    <button type="button" class="cf-btn sm" data-open="cat-edit-modal" data-fill-id="@c.CategoryId" data-fill-name="@c.Name" data-fill-type="@c.Type" data-fill-icon="@c.Icon">Edit</button>
+                    <form action="@Url.Action("Delete", "Categories")" method="post" onsubmit="return confirm('Delete this category?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@c.CategoryId" />
+                        <button type="submit" class="cf-btn sm danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="modal-overlay" id="cat-add-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Add New Category</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("Create", "Categories")" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group"><label>Name</label><input type="text" name="name" class="form-control" placeholder="e.g. Fitness GYM" required maxlength="50" /></div>
+            <div class="form-group"><label>Type</label>
+                <select name="type" class="form-control"><option value="Expense">Expense</option><option value="Income">Income</option></select></div>
+            <div class="form-group"><label>Icon</label>
+                <select name="icon" class="form-control">
+                    @foreach (var ic in icons) { <option value="@ic">@ic.Replace("fa-", "")</option> }
+                </select></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="cat-edit-modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 class="card-title">Edit Category</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+        <form action="@Url.Action("Edit", "Categories")" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" data-field="id" />
+            <div class="form-group"><label>Name</label><input type="text" name="name" data-field="name" class="form-control" required maxlength="50" /></div>
+            <div class="form-group"><label>Type</label>
+                <select name="type" data-field="type" class="form-control"><option value="Expense">Expense</option><option value="Income">Income</option></select></div>
+            <div class="form-group"><label>Icon</label>
+                <select name="icon" data-field="icon" class="form-control">
+                    @foreach (var ic in icons) { <option value="@ic">@ic.Replace("fa-", "")</option> }
+                </select></div>
+            <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Update</button></div>
+        </form>
+    </div>
+</div>

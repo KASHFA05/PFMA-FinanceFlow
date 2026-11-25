@@ -1,0 +1,390 @@
+@model dynamic
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Dashboard";
+    var recentTransactions = ViewBag.RecentTransactions as List<PFMA.Models.Transaction> ?? new List<PFMA.Models.Transaction>();
+}
+
+<!-- Advisor Recommendation Alert Banner (if exists) -->
+@if (ViewBag.Recommendations != null)
+{
+    <div class="alert-banner">
+        <i class="fa-solid fa-circle-info" style="font-size: 1.1rem;"></i>
+        <div>
+            <strong>Financial Advice Alert:</strong> @ViewBag.Recommendations.Text
+        </div>
+    </div>
+}
+
+<!-- Top Metric Cards Grid -->
+<div class="dashboard-grid">
+    <!-- Card 1: Total Balance -->
+    <div class="stat-card">
+        <div class="stat-details">
+            <span class="stat-label">Total Balance</span>
+            <span class="stat-value">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", ViewBag.TotalBalance)</span>
+            <span class="stat-trend up">
+                <i class="fa-solid fa-arrow-trend-up"></i> +2.4% from last month
+            </span>
+        </div>
+        <div class="stat-icon icon-blue">
+            <i class="fa-solid fa-wallet"></i>
+        </div>
+    </div>
+
+    <!-- Card 2: Monthly Income -->
+    <div class="stat-card">
+        <div class="stat-details">
+            <span class="stat-label">Monthly Income</span>
+            <span class="stat-value">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", ViewBag.MonthlyIncome)</span>
+            <span class="stat-trend up" style="color: var(--primary);">
+                <i class="fa-regular fa-circle-check"></i> 85% of target reached
+            </span>
+        </div>
+        <div class="stat-icon icon-green">
+            <i class="fa-solid fa-money-bill-wave"></i>
+        </div>
+    </div>
+
+    <!-- Card 3: Monthly Expenses -->
+    <div class="stat-card">
+        <div class="stat-details">
+            <span class="stat-label">Monthly Expenses</span>
+            <span class="stat-value">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", ViewBag.MonthlyExpense)</span>
+            <span class="stat-trend down">
+                <i class="fa-solid fa-arrow-trend-up"></i> 12% higher than usual
+            </span>
+        </div>
+        <div class="stat-icon icon-red">
+            <i class="fa-solid fa-cart-shopping"></i>
+        </div>
+    </div>
+
+    <!-- Card 4: Savings Progress -->
+    <div class="stat-card" style="display: block;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="stat-details">
+                <span class="stat-label">Savings Progress</span>
+                <span class="stat-value">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", ViewBag.TotalSavings)</span>
+            </div>
+            <div class="stat-icon icon-yellow">
+                <i class="fa-solid fa-piggy-bank"></i>
+            </div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar" style="width: @(ViewBag.SavingsPercentage)%;"></div>
+        </div>
+        <div class="progress-info">
+            <span>target: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", ViewBag.TargetSavings)</span>
+            <span>@(ViewBag.SavingsPercentage)%</span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section Grid -->
+<div class="charts-section-grid">
+    <!-- Chart 1: Spending Trends (neon) -->
+    <div class="content-card neon-card">
+        <style>
+            .neon-card { background: #fff !important; border: 1px solid rgba(6,182,212,.25) !important; box-shadow: 0 8px 30px rgba(6,182,212,.12) !important; }
+            .neon-card .toggle-btn { cursor: pointer; }
+        </style>
+        <div class="card-header-flex">
+            <h3 class="card-title">Spending Trends</h3>
+            <div class="toggle-group">
+                <button type="button" class="toggle-btn" data-trend="daily">Daily</button>
+                <button type="button" class="toggle-btn active" data-trend="weekly">Weekly</button>
+                <button type="button" class="toggle-btn" data-trend="m6">6 Months</button>
+                <button type="button" class="toggle-btn" data-trend="m12">1 Year</button>
+            </div>
+        </div>
+        <div style="height: 250px; position: relative;">
+            <canvas id="spendingTrendsChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 2: Category Breakdown -->
+    <div class="content-card">
+        <div class="card-header-flex">
+            <h3 class="card-title">By Category</h3>
+        </div>
+        
+        <div class="donut-chart-container">
+            <canvas id="categoryDonutChart"></canvas>
+            <div class="donut-inner-text">
+                <span class="donut-inner-label">Total</span>
+                <span class="donut-inner-val">@CurrencyHelper.Symbol(Context) @String.Format("{0:N1}k", ViewBag.MonthlyExpense / 1000m)</span>
+            </div>
+        </div>
+
+        <div class="category-legend">
+            @for (int i = 0; i < Math.Min(4, ((string[])ViewBag.ChartCategories).Length); i++)
+            {
+                var catName = ((string[])ViewBag.ChartCategories)[i];
+                var catPct = ((double[])ViewBag.ChartCategoryPercentages)[i];
+                string color = i == 0 ? "#0bb5a2" : i == 1 ? "#ef4444" : i == 2 ? "#f59e0b" : "#1e293b";
+                <div class="legend-item">
+                    <span class="legend-dot" style="background-color: @color;"></span>
+                    <span>@catName (@catPct%)</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="content-card" style="margin-bottom: 2rem;">
+    <div class="card-header-flex">
+        <h3 class="card-title">Recent Transactions</h3>
+        <a href="@Url.Action("Transactions", "Home")" class="auth-link" style="font-size: 0.85rem;">View All</a>
+    </div>
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (recentTransactions.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-light); padding: 2rem;">No recent transactions. Click (+) to add one!</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var tx in recentTransactions)
+                    {
+                        string badgeClass = tx.Category.ToLower() switch
+                        {
+                            "food" => "badge-food",
+                            "salary" => "badge-salary",
+                            "transport" => "badge-transport",
+                            "bills" => "badge-bills",
+                            "housing" => "badge-housing",
+                            _ => "badge-misc"
+                        };
+                        string sign = tx.Type == "Income" ? "+" : "-";
+                        string amountClass = tx.Type == "Income" ? "text-amount-plus" : "text-amount-minus";
+                        
+                        <tr>
+                            <td style="color: var(--text-secondary);">@tx.Date.ToString("MMM dd, yyyy")</td>
+                            <td style="font-weight: 600;">@tx.Description</td>
+                            <td>
+                                <span class="badge @badgeClass">@tx.Category</span>
+                            </td>
+                            <td class="@amountClass" style="text-align: right;">@(sign)@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", tx.Amount)</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Chart 1: Spending Trends (neon glowing lines + bars)
+            const trendsCtx = document.getElementById('spendingTrendsChart').getContext('2d');
+
+            const allLabels = @Html.Raw(Json.Serialize(ViewBag.TrendLabels12));
+            const allIncome = @Html.Raw(Json.Serialize(ViewBag.TrendIncome12));
+            const allExpense = @Html.Raw(Json.Serialize(ViewBag.TrendExpense12));
+
+            const dayLabels = @Html.Raw(Json.Serialize(ViewBag.FlowDayLabels));
+            const dayIncome = @Html.Raw(Json.Serialize(ViewBag.FlowDayIncome));
+            const dayExpense = @Html.Raw(Json.Serialize(ViewBag.FlowDayExpense));
+            const weekLabels = @Html.Raw(Json.Serialize(ViewBag.FlowWeekLabels));
+            const weekIncome = @Html.Raw(Json.Serialize(ViewBag.FlowWeekIncome));
+            const weekExpense = @Html.Raw(Json.Serialize(ViewBag.FlowWeekExpense));
+
+            // glow around the lines
+            const glowPlugin = {
+                id: 'glow',
+                beforeDatasetDraw: function (chart, args) {
+                    const ds = chart.data.datasets[args.index];
+                    if (ds.glow) { chart.ctx.save(); chart.ctx.shadowColor = ds.glow; chart.ctx.shadowBlur = ds.glowBlur || 18; }
+                },
+                afterDatasetDraw: function (chart, args) {
+                    const ds = chart.data.datasets[args.index];
+                    if (ds.glow) chart.ctx.restore();
+                }
+            };
+
+            // arrow head at the end of the main line
+            const arrowPlugin = {
+                id: 'arrowHead',
+                afterDatasetsDraw: function (chart) {
+                    chart.data.datasets.forEach(function (ds, i) {
+                        if (!ds.arrow) return;
+                        const pts = chart.getDatasetMeta(i).data;
+                        if (pts.length < 2) return;
+                        const last = pts[pts.length - 1];
+                        const prev = pts[pts.length - 2];
+                        const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
+                        const size = 13;
+                        const c = chart.ctx;
+                        c.save();
+                        c.translate(last.x, last.y);
+                        c.rotate(angle);
+                        c.shadowColor = ds.borderColor;
+                        c.shadowBlur = 18;
+                        c.strokeStyle = ds.borderColor;
+                        c.lineWidth = 2.5;
+                        c.lineJoin = 'round';
+                        c.beginPath();
+                        c.moveTo(size, 0);
+                        c.lineTo(-size * 0.6, -size * 0.75);
+                        c.lineTo(-size * 0.6, size * 0.75);
+                        c.closePath();
+                        c.stroke();
+                        c.restore();
+                    });
+                }
+            };
+
+            function barGradient(context) {
+                const chart = context.chart;
+                const area = chart.chartArea;
+                if (!area) return 'rgba(6,182,212,.8)';
+                const g = chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+                g.addColorStop(0, 'rgba(6,182,212,.95)');
+                g.addColorStop(1, 'rgba(6,182,212,.06)');
+                return g;
+            }
+
+            function areaGradient(context) {
+                const chart = context.chart;
+                const area = chart.chartArea;
+                if (!area) return 'rgba(6,182,212,.1)';
+                const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+                g.addColorStop(0, 'rgba(6,182,212,.25)');
+                g.addColorStop(1, 'rgba(6,182,212,0)');
+                return g;
+            }
+
+            // mode: 'daily' | 'weekly' | 'm6' | 'm12'
+            function seriesFor(mode) {
+                let labels, income, expense;
+                if (mode === 'daily') {
+                    labels = dayLabels; income = dayIncome; expense = dayExpense;
+                } else if (mode === 'weekly') {
+                    labels = weekLabels; income = weekIncome; expense = weekExpense;
+                } else {
+                    const months = mode === 'm12' ? 12 : 6;
+                    const from = Math.max(0, allLabels.length - months);
+                    labels = allLabels.slice(from);
+                    income = allIncome.slice(from);
+                    expense = allExpense.slice(from);
+                }
+                return {
+                    labels: labels,
+                    income: income,
+                    expense: expense,
+                    savings: income.map(function (v, i) { return Math.max(0, v - expense[i]); })
+                };
+            }
+
+            const first = seriesFor('weekly');
+            const trendChart = new Chart(trendsCtx, {
+                type: 'bar',
+                data: {
+                    labels: first.labels,
+                    datasets: [
+                        {
+                            type: 'bar', label: 'Savings', data: first.savings,
+                            backgroundColor: barGradient, borderRadius: 3, barPercentage: 0.35, categoryPercentage: 0.9, order: 3
+                        },
+                        {
+                            type: 'line', label: 'Expenses', data: first.expense,
+                            borderColor: '#14b8a6', borderWidth: 1.8, cubicInterpolationMode: 'monotone', pointRadius: 0, fill: false,
+                            glow: 'rgba(20,184,166,.55)', glowBlur: 8, order: 2
+                        },
+                        {
+                            type: 'line', label: 'Income', data: first.income,
+                            borderColor: '#06b6d4', borderWidth: 3.5, cubicInterpolationMode: 'monotone', fill: true, backgroundColor: areaGradient,
+                            pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: '#06b6d4',
+                            glow: 'rgba(6,182,212,.7)', glowBlur: 14, arrow: true, order: 1
+                        }
+                    ]
+                },
+                plugins: [glowPlugin, arrowPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 1800, easing: 'easeOutQuart' },
+                    layout: { padding: { right: 22, top: 10 } },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', align: 'start', labels: { color: '#475569', usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 10 } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(3,21,38,.95)', borderColor: 'rgba(34,211,238,.5)', borderWidth: 1,
+                            titleColor: '#fff', bodyColor: '#bdeeff',
+                            callbacks: { label: function (c) { return ' ' + c.dataset.label + ': @Html.Raw(CurrencyHelper.Symbol(Context)) ' + Number(c.parsed.y).toLocaleString('en-US'); } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#e5e7eb', borderDash: [3, 5], drawBorder: false },
+                            border: { color: '#cbd5e1' },
+                            ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } }
+                        },
+                        x: {
+                            grid: { color: '#f1f5f9', borderDash: [3, 5] },
+                            border: { color: '#cbd5e1' },
+                            ticks: { color: '#64748b', font: { family: 'Inter', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
+                        }
+                    }
+                }
+            });
+
+            const trendButtons = Array.prototype.slice.call(document.querySelectorAll('[data-trend]'));
+            function showTrend(mode) {
+                const s = seriesFor(mode);
+                trendChart.data.labels = s.labels;
+                trendChart.data.datasets[0].data = s.savings;
+                trendChart.data.datasets[1].data = s.expense;
+                trendChart.data.datasets[2].data = s.income;
+                trendChart.update();
+                trendButtons.forEach(function (b) {
+                    b.classList.toggle('active', b.getAttribute('data-trend') === mode);
+                });
+            }
+            trendButtons.forEach(function (b) {
+                b.addEventListener('click', function () { showTrend(b.getAttribute('data-trend')); });
+            });
+
+            // Chart 2: Category Breakdown (Doughnut Chart)
+            const catCtx = document.getElementById('categoryDonutChart').getContext('2d');
+            
+            const catLabels = @Html.Raw(Json.Serialize(ViewBag.ChartCategories));
+            const catAmounts = @Html.Raw(Json.Serialize(ViewBag.ChartCategoryAmounts));
+
+            new Chart(catCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: catLabels.length > 0 ? catLabels : ["Food", "Transport", "Bills", "Other"],
+                    datasets: [{
+                        data: catAmounts.length > 0 ? catAmounts : [40, 25, 15, 20],
+                        backgroundColor: ['#0bb5a2', '#ef4444', '#f59e0b', '#1e293b'],
+                        borderWidth: 0,
+                        cutout: '80%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        });
+    </script>
+}

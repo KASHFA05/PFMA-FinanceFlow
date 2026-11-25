@@ -1,0 +1,396 @@
+@model PFMA.Models.AdminUserDetailsViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = Model.User.Name + " - User Details";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string roleClass = Model.User.Role == "Admin" ? "admin" : (Model.User.Role == "Advisor" ? "advisor" : "user");
+    string initial = Model.User.Name.Length > 0 ? Model.User.Name.Substring(0, 1).ToUpper() : "U";
+    string[] colors = { "c-blue", "c-green", "c-purple", "c-amber", "c-teal", "c-pink" };
+}
+
+<div style="margin-bottom:1rem;">
+    <a href="@Url.Action("Index", "Admin")" class="cf-btn sm"><i class="fa-solid fa-arrow-left"></i> Back to Admin Panel</a>
+</div>
+
+<div class="cf-user-banner">
+    <div class="cf-user-avatar">@initial</div>
+    <div style="flex:1; min-width:200px;">
+        <div style="font-size:1.4rem; font-weight:800; color:#1e2a52;">@Model.User.Name</div>
+        <div style="font-size:0.85rem; color:var(--text-secondary);">@Model.User.Email &bull; @Model.User.AccountType account</div>
+    </div>
+    <span class="cf-badge @roleClass">@Model.User.Role</span>
+    <span style="font-size:0.75rem; color:var(--text-light);">Admin can edit or delete this user's data</span>
+</div>
+
+<div class="cf-tabs">
+    <button type="button" class="cf-tab active" data-tab="t-overview"><i class="fa-solid fa-chart-pie"></i> Overview</button>
+    <button type="button" class="cf-tab" data-tab="t-transactions"><i class="fa-solid fa-list-check"></i> Transactions <span class="count">@Model.Transactions.Count</span></button>
+    <button type="button" class="cf-tab" data-tab="t-budgets"><i class="fa-solid fa-wallet"></i> Budgets <span class="count">@Model.Budgets.Count</span></button>
+    <button type="button" class="cf-tab" data-tab="t-goals"><i class="fa-solid fa-piggy-bank"></i> Savings Goals <span class="count">@Model.Goals.Count</span></button>
+    <button type="button" class="cf-tab" data-tab="t-bills"><i class="fa-solid fa-file-invoice-dollar"></i> Bills <span class="count">@Model.Bills.Count</span></button>
+    <button type="button" class="cf-tab" data-tab="t-debts"><i class="fa-solid fa-money-bill-transfer"></i> Debts <span class="count">@Model.Debts.Count</span></button>
+    <button type="button" class="cf-tab" data-tab="t-qr"><i class="fa-solid fa-qrcode"></i> Bill QR <span class="count">@Model.QRCodes.Count</span></button>
+    <button type="button" class="cf-tab" data-tab="t-categories"><i class="fa-solid fa-tags"></i> Categories <span class="count">@Model.Categories.Count</span></button>
+</div>
+
+<!-- Overview -->
+<div class="cf-tabpanel active" id="t-overview">
+    <div class="cf-stats">
+        <div class="cf-stat green"><div class="label">Total Income</div><div class="value" style="color:#059669;">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", Model.TotalIncome)</div></div>
+        <div class="cf-stat red"><div class="label">Total Expenses</div><div class="value" style="color:#dc2626;">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", Model.TotalExpense)</div></div>
+        <div class="cf-stat blue"><div class="label">Net Savings</div><div class="value">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", Model.NetSavings)</div></div>
+        <div class="cf-stat purple"><div class="label">Saved in goals</div><div class="value">@CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", Model.Goals.Sum(g => g.CurrentAmount))</div></div>
+    </div>
+    <div class="cf-panel">
+        <h3><i class="fa-solid fa-clock-rotate-left"></i> Latest transactions</h3>
+        @if (Model.Transactions.Count == 0)
+        {
+            <div style="color:var(--text-light);">This user has no transactions yet.</div>
+        }
+        else
+        {
+            foreach (var tx in Model.Transactions.Take(5))
+            {
+                <div class="cf-inspect-item">
+                    <span>@tx.Date.ToString("dd MMM yyyy") &bull; @tx.Category &bull; @tx.Description</span>
+                    <strong style="color:@(tx.Type == "Income" ? "#059669" : "#dc2626");">@(tx.Type == "Income" ? "+" : "-")@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", tx.Amount)</strong>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<!-- Transactions -->
+<div class="cf-tabpanel" id="t-transactions">
+    @if (Model.Transactions.Count == 0)
+    {
+        <div class="cf-empty">No transactions.</div>
+    }
+    else
+    {
+        <div class="cf-table-wrap">
+            <table class="cf-table">
+                <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th class="right">Amount</th><th class="right">Actions</th></tr></thead>
+                <tbody>
+                    @foreach (var tx in Model.Transactions)
+                    {
+                        bool income = tx.Type == "Income";
+                        <tr>
+                            <td style="white-space:nowrap;">@tx.Date.ToString("dd MMM yyyy")</td>
+                            <td style="font-weight:700; color:#1e2a52;">@tx.Category</td>
+                            <td>@tx.Description</td>
+                            <td><span class="cf-badge @(income ? "income" : "expense")">@tx.Type</span></td>
+                            <td class="right" style="font-weight:800; color:@(income ? "#059669" : "#dc2626");">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", tx.Amount)</td>
+                            <td>
+                                <div class="actions">
+                                    <button type="button" class="cf-btn sm" data-open="a-tx-modal" data-fill-transactionid="@tx.TransactionId" data-fill-type="@tx.Type" data-fill-category="@tx.Category"
+                                            data-fill-description="@tx.Description" data-fill-amount="@tx.Amount.ToString("0.##", inv)" data-fill-date="@tx.Date.ToString("yyyy-MM-dd")" data-fill-notes="@tx.Notes">Edit</button>
+                                    <form action="@Url.Action("AdminDeleteTransaction", "Admin")" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@Model.User.UserId" />
+                                    <input type="hidden" name="transactionId" value="@tx.TransactionId" />
+                                    <button type="submit" class="cf-btn sm danger">Delete</button>
+                                </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Budgets -->
+<div class="cf-tabpanel" id="t-budgets">
+    @if (Model.Budgets.Count == 0)
+    {
+        <div class="cf-empty">No budgets set.</div>
+    }
+    else
+    {
+        <div class="cf-grid">
+            @for (int i = 0; i < Model.Budgets.Count; i++)
+            {
+                var b = Model.Budgets[i];
+                decimal spent = Model.Transactions
+                    .Where(t => t.Type == "Expense" && t.Category == b.Category && t.Date.ToString("yyyy-MM", inv) == b.Month)
+                    .Sum(t => t.Amount);
+                double pct = b.Amount > 0 ? (double)(spent / b.Amount) * 100 : 0;
+                double barPct = Math.Min(100, Math.Max(0, pct));
+                string barClass = pct >= 100 ? "red" : (pct >= 80 ? "amber" : "");
+                <div class="cf-card @colors[i % colors.Length]">
+                    <h3 class="cf-card-title">@b.Category</h3>
+                    <div class="cf-meta"><i class="fa-regular fa-calendar"></i> @b.Month</div>
+                    <div class="cf-row"><span>Spent: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", spent)</span><span>Budget: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", b.Amount)</span></div>
+                    <div class="cf-progress @barClass"><div style="width: @(barPct.ToString("0.##", inv))%;"></div></div>
+                    <div class="cf-percent">@pct.ToString("0", inv)% used</div>
+                    <div class="cf-actions">
+                        <button type="button" class="cf-btn" data-open="a-budget-modal" data-fill-budgetid="@b.BudgetId" data-fill-category="@b.Category" data-fill-amount="@b.Amount.ToString("0.##", inv)" data-fill-month="@b.Month"><i class="fa-regular fa-pen-to-square"></i> Edit</button>
+                        <form action="@Url.Action("AdminDeleteBudget", "Admin")" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@Model.User.UserId" />
+                                    <input type="hidden" name="budgetId" value="@b.BudgetId" />
+                                    <button type="submit" class="cf-btn sm danger">Delete</button>
+                                </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Goals -->
+<div class="cf-tabpanel" id="t-goals">
+    @if (Model.Goals.Count == 0)
+    {
+        <div class="cf-empty">No savings goals.</div>
+    }
+    else
+    {
+        <div class="cf-grid">
+            @for (int i = 0; i < Model.Goals.Count; i++)
+            {
+                var g = Model.Goals[i];
+                double pct = g.TargetAmount > 0 ? (double)(g.CurrentAmount / g.TargetAmount) * 100 : 0;
+                double barPct = Math.Min(100, Math.Max(0, pct));
+                <div class="cf-card @colors[i % colors.Length]">
+                    <h3 class="cf-card-title">@g.GoalName</h3>
+                    <div class="cf-meta"><i class="fa-regular fa-calendar"></i> Target: @(g.TargetDate.HasValue ? g.TargetDate.Value.ToString("dd MMM yyyy") : "No date")</div>
+                    <div class="cf-row"><span>Saved: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", g.CurrentAmount)</span><span>Target: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", g.TargetAmount)</span></div>
+                    <div class="cf-progress"><div style="width: @(barPct.ToString("0.##", inv))%;"></div></div>
+                    <div class="cf-percent">@pct.ToString("0.0", inv)% Achieved</div>
+                    <div class="cf-actions">
+                        <button type="button" class="cf-btn" data-open="a-goal-modal" data-fill-goalid="@g.GoalId" data-fill-goalname="@g.GoalName" data-fill-targetamount="@g.TargetAmount.ToString("0.##", inv)"
+                                data-fill-currentamount="@g.CurrentAmount.ToString("0.##", inv)" data-fill-targetdate="@(g.TargetDate.HasValue ? g.TargetDate.Value.ToString("yyyy-MM-dd") : "")"><i class="fa-regular fa-pen-to-square"></i> Edit</button>
+                        <form action="@Url.Action("AdminDeleteGoal", "Admin")" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@Model.User.UserId" />
+                                    <input type="hidden" name="goalId" value="@g.GoalId" />
+                                    <button type="submit" class="cf-btn sm danger">Delete</button>
+                                </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Bills -->
+<div class="cf-tabpanel" id="t-bills">
+    @if (Model.Bills.Count == 0)
+    {
+        <div class="cf-empty">No bills.</div>
+    }
+    else
+    {
+        <div class="cf-table-wrap">
+            <table class="cf-table">
+                <thead><tr><th>Bill</th><th>Provider</th><th>Due date</th><th>Status</th><th class="right">Amount</th><th class="right">Actions</th></tr></thead>
+                <tbody>
+                    @foreach (var b in Model.Bills)
+                    {
+                        bool paid = b.Status == "Paid";
+                        bool late = !paid && b.DueDate.Date < DateTime.Today;
+                        <tr>
+                            <td style="font-weight:700; color:#1e2a52;">@b.Title</td>
+                            <td>@b.Provider</td>
+                            <td>@b.DueDate.ToString("dd MMM yyyy")</td>
+                            <td><span class="cf-badge @(paid ? "paid" : "red")">@(paid ? "Paid" : (late ? "Overdue" : "Unpaid / Due"))</span></td>
+                            <td class="right" style="font-weight:800;">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", b.Amount)</td>
+                            <td>
+                                <div class="actions">
+                                    <button type="button" class="cf-btn sm" data-open="a-bill-modal" data-fill-reminderid="@b.ReminderId" data-fill-title="@b.Title" data-fill-category="@b.Category" data-fill-provider="@b.Provider"
+                                            data-fill-amount="@b.Amount.ToString("0.##", inv)" data-fill-duedate="@b.DueDate.ToString("yyyy-MM-dd")" data-fill-status="@(paid ? "Paid" : "Upcoming")">Edit</button>
+                                    <form action="@Url.Action("AdminDeleteBill", "Admin")" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@Model.User.UserId" />
+                                    <input type="hidden" name="reminderId" value="@b.ReminderId" />
+                                    <button type="submit" class="cf-btn sm danger">Delete</button>
+                                </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Debts -->
+<div class="cf-tabpanel" id="t-debts">
+    @if (Model.Debts.Count == 0)
+    {
+        <div class="cf-empty">No debts or loans.</div>
+    }
+    else
+    {
+        <div class="cf-grid">
+            @foreach (var d in Model.Debts)
+            {
+                bool pay = d.Type == "To Pay";
+                double pct = d.TotalAmount > 0 ? (double)(d.ClearedAmount / d.TotalAmount) * 100 : 0;
+                double barPct = Math.Min(100, Math.Max(0, pct));
+                <div class="cf-card @(d.IsCleared ? "c-teal" : (pay ? "c-red" : "c-blue"))">
+                    <div style="display:flex; justify-content:space-between; gap:0.5rem;">
+                        <h3 class="cf-card-title">@d.Title</h3>
+                        <span class="cf-badge @(d.IsCleared ? "cleared" : (pay ? "topay" : "toreceive"))">@(d.IsCleared ? "Cleared" : d.Type)</span>
+                    </div>
+                    <div class="cf-meta"><i class="fa-regular fa-calendar"></i> Due: @d.DueDate.ToString("dd MMM yyyy")</div>
+                    <div class="cf-row"><span>Cleared: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", d.ClearedAmount)</span><span>Total: @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", d.TotalAmount)</span></div>
+                    <div class="cf-progress @(d.IsCleared ? "" : (pay ? "red" : "blue"))"><div style="width: @(barPct.ToString("0.##", inv))%;"></div></div>
+                    <div class="cf-percent">@pct.ToString("0.0", inv)% Completed &bull; Remaining @CurrencyHelper.Symbol(Context) @String.Format("{0:N0}", d.Remaining)</div>
+                    <div class="cf-actions">
+                        <button type="button" class="cf-btn" data-open="a-debt-modal" data-fill-debtid="@d.DebtId" data-fill-title="@d.Title" data-fill-type="@d.Type"
+                                data-fill-totalamount="@d.TotalAmount.ToString("0.##", inv)" data-fill-clearedamount="@d.ClearedAmount.ToString("0.##", inv)" data-fill-duedate="@d.DueDate.ToString("yyyy-MM-dd")"><i class="fa-regular fa-pen-to-square"></i> Edit</button>
+                        <form action="@Url.Action("AdminDeleteDebt", "Admin")" method="post" style="display:inline;" onsubmit="return confirm('Delete this item?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@Model.User.UserId" />
+                                    <input type="hidden" name="debtId" value="@d.DebtId" />
+                                    <button type="submit" class="cf-btn sm danger">Delete</button>
+                                </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- QR codes -->
+<div class="cf-tabpanel" id="t-qr">
+    @if (Model.QRCodes.Count == 0)
+    {
+        <div class="cf-empty">No bill QR codes.</div>
+    }
+    else
+    {
+        <div class="cf-table-wrap">
+            <table class="cf-table">
+                <thead><tr><th>Title</th><th>Consumer number</th><th class="right">Amount</th></tr></thead>
+                <tbody>
+                    @foreach (var q in Model.QRCodes)
+                    {
+                        <tr><td style="font-weight:700; color:#1e2a52;">@q.Title</td><td>@q.ConsumerNumber</td><td class="right" style="font-weight:800;">@CurrencyHelper.Symbol(Context) @String.Format("{0:N2}", q.Amount)</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Categories -->
+<div class="cf-tabpanel" id="t-categories">
+    @if (Model.Categories.Count == 0)
+    {
+        <div class="cf-empty">This user has not opened the Categories page yet.</div>
+    }
+    else
+    {
+        <div class="cf-cat-grid">
+            @foreach (var c in Model.Categories)
+            {
+                string cls = c.Type == "Income" ? "income" : "expense";
+                <div class="cf-cat @cls">
+                    <span class="cf-badge @cls">@c.Type</span>
+                    <div class="icon"><i class="fa-solid @c.Icon"></i></div>
+                    <div class="name" style="margin-bottom:0;">@c.Name</div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+
+<!-- ===== Admin edit modals ===== -->
+<div class="modal-overlay" id="a-tx-modal"><div class="modal-content">
+    <div class="modal-header"><h3 class="card-title">Edit Transaction</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+    <form action="@Url.Action("AdminEditTransaction", "Admin")" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="userId" value="@Model.User.UserId" />
+        <input type="hidden" name="transactionId" data-field="transactionid" />
+        <div class="form-group"><label>Type</label><select name="type" data-field="type" class="form-control"><option value="Expense">Expense</option><option value="Income">Income</option></select></div>
+        <div class="form-group"><label>Category</label><input type="text" name="category" data-field="category" class="form-control" required /></div>
+        <div class="form-group"><label>Description</label><input type="text" name="description" data-field="description" class="form-control" /></div>
+        <div class="form-group"><label>Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="0.01" name="amount" data-field="amount" class="form-control" required /></div>
+        <div class="form-group"><label>Date</label><input type="date" name="date" data-field="date" class="form-control" required /></div>
+        <div class="form-group"><label>Notes</label><input type="text" name="notes" data-field="notes" class="form-control" /></div>
+        <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>
+</div></div>
+
+<div class="modal-overlay" id="a-budget-modal"><div class="modal-content">
+    <div class="modal-header"><h3 class="card-title">Edit Budget</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+    <form action="@Url.Action("AdminEditBudget", "Admin")" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="userId" value="@Model.User.UserId" />
+        <input type="hidden" name="budgetId" data-field="budgetid" />
+        <div class="form-group"><label>Category</label><input type="text" name="category" data-field="category" class="form-control" required /></div>
+        <div class="form-group"><label>Monthly Limit (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="amount" data-field="amount" class="form-control" required /></div>
+        <div class="form-group"><label>Month</label><input type="month" name="month" data-field="month" class="form-control" required /></div>
+        <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>
+</div></div>
+
+<div class="modal-overlay" id="a-goal-modal"><div class="modal-content">
+    <div class="modal-header"><h3 class="card-title">Edit Savings Goal</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+    <form action="@Url.Action("AdminEditGoal", "Admin")" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="userId" value="@Model.User.UserId" />
+        <input type="hidden" name="goalId" data-field="goalid" />
+        <div class="form-group"><label>Goal Name</label><input type="text" name="goalName" data-field="goalname" class="form-control" required /></div>
+        <div class="form-group"><label>Target Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="targetAmount" data-field="targetamount" class="form-control" required /></div>
+        <div class="form-group"><label>Saved Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="0" name="currentAmount" data-field="currentamount" class="form-control" required /></div>
+        <div class="form-group"><label>Target Date</label><input type="date" name="targetDate" data-field="targetdate" class="form-control" /></div>
+        <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>
+</div></div>
+
+<div class="modal-overlay" id="a-bill-modal"><div class="modal-content">
+    <div class="modal-header"><h3 class="card-title">Edit Bill</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+    <form action="@Url.Action("AdminEditBill", "Admin")" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="userId" value="@Model.User.UserId" />
+        <input type="hidden" name="reminderId" data-field="reminderid" />
+        <div class="form-group"><label>Bill Title</label><input type="text" name="title" data-field="title" class="form-control" required /></div>
+        <div class="form-group"><label>Category</label><input type="text" name="category" data-field="category" class="form-control" /></div>
+        <div class="form-group"><label>Provider</label><input type="text" name="provider" data-field="provider" class="form-control" /></div>
+        <div class="form-group"><label>Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="amount" data-field="amount" class="form-control" required /></div>
+        <div class="form-group"><label>Due Date</label><input type="date" name="dueDate" data-field="duedate" class="form-control" required /></div>
+        <div class="form-group"><label>Status</label><select name="status" data-field="status" class="form-control"><option value="Upcoming">Unpaid / Due</option><option value="Paid">Paid</option></select></div>
+        <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>
+</div></div>
+
+<div class="modal-overlay" id="a-debt-modal"><div class="modal-content">
+    <div class="modal-header"><h3 class="card-title">Edit Debt</h3><button type="button" class="modal-close" data-close>&times;</button></div>
+    <form action="@Url.Action("AdminEditDebt", "Admin")" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="userId" value="@Model.User.UserId" />
+        <input type="hidden" name="debtId" data-field="debtid" />
+        <div class="form-group"><label>Title</label><input type="text" name="title" data-field="title" class="form-control" required /></div>
+        <div class="form-group"><label>Type</label><select name="type" data-field="type" class="form-control"><option value="To Pay">To Pay</option><option value="To Receive">To Receive</option></select></div>
+        <div class="form-group"><label>Total Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="1" name="totalAmount" data-field="totalamount" class="form-control" required /></div>
+        <div class="form-group"><label>Cleared Amount (@CurrencyHelper.Symbol(Context))</label><input type="number" step="0.01" min="0" name="clearedAmount" data-field="clearedamount" class="form-control" required /></div>
+        <div class="form-group"><label>Due Date</label><input type="date" name="dueDate" data-field="duedate" class="form-control" required /></div>
+        <div class="modal-btn-row"><button type="button" class="btn-secondary" data-close>Cancel</button><button type="submit" class="btn-primary">Save Changes</button></div>
+    </form>
+</div></div>
+
+@section Scripts {
+    <script>
+        var startTab = '@(ViewBag.ActiveTab as string)';
+        document.querySelectorAll('.cf-tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.cf-tab').forEach(function (t) { t.classList.remove('active'); });
+                document.querySelectorAll('.cf-tabpanel').forEach(function (p) { p.classList.remove('active'); });
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+            });
+        });
+        if (startTab) {
+            var t = document.querySelector('.cf-tab[data-tab="' + startTab + '"]');
+            if (t) t.click();
+        }
+    </script>
+}

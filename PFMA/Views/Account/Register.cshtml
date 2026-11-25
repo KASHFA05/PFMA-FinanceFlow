@@ -1,0 +1,414 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register - FinanceFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: radial-gradient(circle at 20% 15%, #1e1b4b 0%, #0b1020 55%, #02040a 100%) fixed; color: #0f172a; overflow-x: hidden; }
+
+        .lg-wrap { display: flex; min-height: 100vh; }
+
+        /* ================= LEFT: animated showcase ================= */
+        .lg-left {
+            flex: 1.25; position: relative; overflow: hidden; color: #fff;
+            background: transparent;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 0;
+        }
+        .lg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .25;
+            background-image: linear-gradient(rgba(129,140,248,.25) 1px, transparent 1px), linear-gradient(90deg, rgba(129,140,248,.25) 1px, transparent 1px);
+            background-size: 46px 46px;
+            -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 20%, transparent 75%); mask-image: radial-gradient(circle at 50% 50%, #000 20%, transparent 75%);
+            animation: gridMove 18s linear infinite;
+        }
+        @@keyframes gridMove { to { background-position: 46px 46px, 46px 46px; } }
+        .lg-orb { position: fixed; z-index: 0; pointer-events: none; border-radius: 50%; filter: blur(70px); opacity: .55; animation: orbFloat 10s ease-in-out infinite; }
+        .lg-orb.a { width: 320px; height: 320px; background: #4f46e5; top: -90px; left: -80px; }
+        .lg-orb.b { width: 300px; height: 300px; background: #0ea5e9; bottom: -90px; right: -60px; animation-delay: -4s; }
+        .lg-orb.c { width: 200px; height: 200px; background: #ec4899; top: 55%; left: 8%; opacity: .3; animation-delay: -7s; }
+        @@keyframes orbFloat { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -34px) scale(1.12); } }
+
+        .lg-headline { position: relative; z-index: 2; text-align: center; margin-bottom: 1.8rem; padding: 0 2rem; animation: fadeDown .9s ease both; }
+        .lg-headline h2 { font-size: 1.8rem; font-weight: 800; letter-spacing: -.5px; }
+        .lg-headline h2 span { background: linear-gradient(90deg, #a5b4fc, #67e8f9, #f9a8d4, #a5b4fc); background-size: 250% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer 5s linear infinite; }
+        .lg-headline p { color: #94a3b8; font-size: .9rem; margin-top: .4rem; }
+        @@keyframes shimmer { to { background-position: 250% center; } }
+        @@keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* carousel */
+        .lg-stage { position: relative; z-index: 2; width: 100%; height: 400px; }
+        .lg-card {
+            position: absolute; left: 50%; top: 50%; width: 300px; height: 380px; border-radius: 18px;
+            background: linear-gradient(160deg, #1c2236, #12172a); border: 1px solid rgba(255,255,255,.08);
+            padding: 1.3rem; display: flex; flex-direction: column;
+            transition: transform .55s cubic-bezier(.22,.8,.3,1), opacity .55s ease, box-shadow .55s ease, border-color .55s ease;
+            transform: translate(-50%, -50%);
+        }
+        .lg-card.active { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6, 0 0 38px rgba(59,130,246,.55), 0 24px 60px rgba(0,0,0,.5); }
+        .lg-card-top { font-weight: 700; font-size: .95rem; display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+        .lg-card-top i { width: 34px; height: 34px; border-radius: 10px; background: rgba(99,102,241,.25); color: #a5b4fc; display: inline-flex; align-items: center; justify-content: center; }
+        .lg-card-body { flex: 1; background: #fff; border-radius: 12px; padding: 1rem; color: #0f172a; display: flex; flex-direction: column; justify-content: center; gap: .9rem; overflow: hidden; }
+        .lg-card-foot { display: flex; align-items: center; gap: .9rem; margin-top: 1rem; }
+        .lg-card-foot .big { font-size: 2.3rem; font-weight: 800; line-height: 1; }
+        .lg-card-foot .small { font-size: .68rem; font-weight: 700; letter-spacing: .6px; color: #cbd5e1; line-height: 1.35; text-transform: uppercase; }
+
+        .goal .row { display: flex; justify-content: space-between; font-size: .8rem; font-weight: 600; margin-bottom: .35rem; }
+        .goal .bar { height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+        .goal .fill { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #14b8a6, #22c55e); transition: width .8s .1s cubic-bezier(.22,.8,.3,1); }
+        .goal:nth-child(2) .fill { background: linear-gradient(90deg, #60a5fa, #6366f1); }
+        .goal:nth-child(3) .fill { background: linear-gradient(90deg, #f472b6, #f59e0b); }
+        .lg-card.active .fill { width: var(--w); }
+
+        .donut { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+        .donut svg { transform: rotate(-90deg); }
+        .donut .bg { fill: none; stroke: #e2e8f0; stroke-width: 14; }
+        .donut .fg { fill: none; stroke: url(#grad); stroke-width: 14; stroke-linecap: round; stroke-dasharray: 326.7; stroke-dashoffset: 326.7; transition: stroke-dashoffset 1s .1s cubic-bezier(.22,.8,.3,1); }
+        .lg-card.active .donut .fg { stroke-dashoffset: var(--off); }
+        .donut .label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 1.6rem; }
+        .donut .label small { font-size: .65rem; font-weight: 600; color: #64748b; }
+        .legend { display: flex; justify-content: space-between; font-size: .72rem; color: #475569; font-weight: 600; }
+
+        .bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 150px; }
+        .bars span { flex: 1; height: 0; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, #818cf8, #22d3ee); transition: height .7s cubic-bezier(.22,.8,.3,1); }
+        .lg-card.active .bars span { height: var(--h); }
+        .bars span:nth-child(1) { transition-delay: .05s; } .bars span:nth-child(2) { transition-delay: .1s; } .bars span:nth-child(3) { transition-delay: .15s; }
+        .bars span:nth-child(4) { transition-delay: .2s; } .bars span:nth-child(5) { transition-delay: .25s; } .bars span:nth-child(6) { transition-delay: .3s; } .bars span:nth-child(7) { transition-delay: .35s; }
+        .days { display: flex; justify-content: space-between; font-size: .65rem; color: #94a3b8; font-weight: 600; }
+
+        .bill { display: flex; align-items: center; justify-content: space-between; gap: .6rem; font-size: .8rem; font-weight: 600; padding: .55rem .7rem; border-radius: 10px; background: #f8fafc; transform: translateX(30px); opacity: 0; transition: transform .4s ease, opacity .4s ease; }
+        .lg-card.active .bill { transform: translateX(0); opacity: 1; }
+        .bill:nth-child(1) { transition-delay: .1s; } .bill:nth-child(2) { transition-delay: .2s; } .bill:nth-child(3) { transition-delay: .3s; }
+        .bill i { color: #6366f1; margin-right: .4rem; }
+        .tag { font-size: .62rem; font-weight: 800; color: #fff; padding: .2rem .6rem; border-radius: 99px; }
+        .tag.paid { background: #16a34a; } .tag.due { background: #e11d48; } .tag.soon { background: #f59e0b; }
+
+        .lg-dots { position: relative; z-index: 2; display: flex; gap: .5rem; margin-top: 1.3rem; }
+        .lg-dots span { width: 8px; height: 8px; border-radius: 99px; background: rgba(255,255,255,.25); transition: all .4s ease; }
+        .lg-dots span.on { width: 26px; background: #60a5fa; }
+
+        /* ================= RIGHT: form ================= */
+        .lg-right { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1.5rem; background: transparent; position: relative; z-index: 2; }
+        .lg-form { width: 100%; max-width: 400px; background: #fff; border-radius: 22px; padding: 2.2rem 2.1rem; box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.1), 0 0 60px rgba(59,130,246,.25); }
+        .lg-form > * { animation: fadeUp .7s ease both; }
+        .lg-form > *:nth-child(1) { animation-delay: .1s; } .lg-form > *:nth-child(2) { animation-delay: .2s; }
+        .lg-form > *:nth-child(3) { animation-delay: .3s; } .lg-form > *:nth-child(4) { animation-delay: .4s; }
+        .lg-form > *:nth-child(5) { animation-delay: .5s; } .lg-form > *:nth-child(6) { animation-delay: .6s; }
+        @@keyframes fadeUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+
+        .lg-brand { display: flex; align-items: center; justify-content: center; gap: .7rem; margin-bottom: 1.6rem; }
+        .lg-logo { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #6366f1, #0ea5e9); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; animation: bob 3s ease-in-out infinite; }
+        @@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .lg-brand span { font-size: 1.6rem; font-weight: 800; letter-spacing: -.5px; }
+        .lg-title { text-align: center; font-size: 1.7rem; font-weight: 800; margin-bottom: .3rem; }
+        .lg-sub { text-align: center; color: #64748b; font-size: .88rem; margin-bottom: 1.6rem; }
+
+        .lg-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: .65rem .8rem; font-size: .85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; animation: shake .5s ease; }
+        @@keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+        .lg-field { position: relative; margin-bottom: .9rem; }
+        .lg-field i.ic { position: absolute; left: .9rem; top: 50%; transform: translateY(-50%); color: #94a3b8; transition: color .2s ease; }
+        .lg-field input { width: 100%; height: 46px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 2.6rem; font-size: .92rem; font-family: inherit; outline: none; transition: border-color .2s ease, box-shadow .2s ease; background: #fff; }
+        .lg-field input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.18); }
+        .lg-field:focus-within i.ic { color: #2563eb; }
+        .lg-eye { position: absolute; right: .9rem; top: 50%; transform: translateY(-50%); color: #94a3b8; cursor: pointer; }
+        .lg-eye:hover { color: #2563eb; }
+
+        .lg-forgot { display: block; text-align: right; font-size: .8rem; color: #2563eb; text-decoration: none; margin: -.2rem 0 1.1rem; font-weight: 600; }
+        .lg-forgot:hover { text-decoration: underline; }
+
+        .lg-btn {
+            width: 100%; height: 46px; border: none; border-radius: 6px; cursor: pointer; color: #fff; font-weight: 700; font-size: .95rem; font-family: inherit;
+            background: linear-gradient(90deg, #2563eb, #4f46e5, #2563eb); background-size: 200% auto;
+            display: flex; align-items: center; justify-content: center; gap: .6rem; position: relative; overflow: hidden;
+            transition: background-position .5s ease, transform .15s ease, box-shadow .2s ease;
+            box-shadow: 0 8px 20px rgba(37,99,235,.3);
+        }
+        .lg-btn:hover { background-position: right center; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(37,99,235,.4); }
+        .lg-btn::after { content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent); transform: skewX(-20deg); animation: sweep 3.5s ease-in-out infinite; }
+        @@keyframes sweep { 0% { left: -60%; } 50%, 100% { left: 130%; } }
+
+        .lg-or { display: flex; align-items: center; gap: .8rem; color: #94a3b8; font-size: .8rem; margin: 1.3rem 0; }
+        .lg-or::before, .lg-or::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+        .lg-foot { text-align: center; font-size: .88rem; color: #64748b; }
+        .lg-foot a { color: #2563eb; font-weight: 700; text-decoration: none; }
+        .lg-foot a:hover { text-decoration: underline; }
+        .lg-note { text-align: center; font-size: .72rem; color: #94a3b8; margin-top: 1.6rem; }
+
+        @@media (max-width: 960px) { .lg-left { display: none; } .lg-right { min-height: 100vh; } }
+    
+        /* ---- register extras ---- */
+        .lg-strength { height: 5px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: -.35rem 0 .35rem; }
+        .lg-strength div { height: 100%; width: 0; border-radius: 99px; transition: width .4s ease, background .4s ease; }
+        .lg-hint { font-size: .72rem; color: #64748b; min-height: 1.1em; margin-bottom: .8rem; display: flex; align-items: center; gap: .35rem; }
+        .lg-hint.ok { color: #16a34a; } .lg-hint.bad { color: #e11d48; }
+        .lg-terms { text-align: center; font-size: .75rem; color: #94a3b8; margin: .9rem 0 0; }
+        .lg-terms a { color: #64748b; text-decoration: underline; }
+        .qr { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; width: 160px; height: 160px; margin: 0 auto; }
+        .qr span { background: #e2e8f0; border-radius: 2px; transform: scale(0); transition: transform .3s ease, background .3s ease; }
+        .qr span.on { background: #0f172a; }
+        .lg-card.active .qr span { transform: scale(1); }
+        .qr-cap { text-align: center; font-size: .72rem; color: #64748b; font-weight: 600; }
+        /* ===== THEME v2: deep blue full screen + dark glass form (like the reference) ===== */
+        body { background: radial-gradient(circle at 22% 18%, #0a3d9e 0%, #062a6b 38%, #031538 74%, #020b22 100%) fixed !important; }
+        .lg-orb.a { background: #1d4ed8; }
+        .lg-orb.b { background: #06b6d4; opacity: .45; }
+        .lg-orb.c { background: #6366f1; opacity: .25; }
+        .lg-grid { opacity: .16; }
+        .lg-form { background: rgba(7,14,36,.72) !important; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.12) !important; border-radius: 18px !important; max-width: 390px !important; padding: 2rem 1.9rem !important; box-shadow: 0 30px 80px rgba(0,0,0,.45) !important; color: #e2e8f0; }
+        .lg-brand span, .lg-title { color: #fff !important; }
+        .lg-sub { color: #a9b8d8 !important; }
+        .lg-field input { background: rgba(255,255,255,.05) !important; border: 1px solid rgba(255,255,255,.16) !important; color: #fff !important; border-radius: 8px !important; }
+        .lg-field input::placeholder { color: #8ea0c4; }
+        .lg-field input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,.3) !important; }
+        .lg-field i.ic, .lg-eye { color: #8ea0c4 !important; }
+        .lg-field:focus-within i.ic, .lg-eye:hover { color: #60a5fa !important; }
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 1000px #0e1b40 inset !important; -webkit-text-fill-color: #fff !important; caret-color: #fff; }
+        .lg-forgot, .lg-foot a, .lg-terms a { color: #60a5fa !important; }
+        .lg-btn { background: linear-gradient(90deg, #1d4ed8, #4f46e5, #1d4ed8) !important; background-size: 200% auto !important; border-radius: 8px !important; }
+        .lg-or { color: #7f8fb3 !important; }
+        .lg-or::before, .lg-or::after { background: rgba(255,255,255,.14) !important; }
+        .lg-foot { color: #cbd5e1 !important; }
+        .lg-note, .lg-terms { color: #8ea0c4 !important; }
+        .lg-error { background: rgba(239,68,68,.15) !important; color: #fecaca !important; border-color: rgba(239,68,68,.45) !important; }
+        .lg-strength { background: rgba(255,255,255,.14) !important; }
+        .lg-hint { color: #9fb0d3 !important; }
+        .lg-hint.ok { color: #4ade80 !important; }
+        .lg-hint.bad { color: #fb7185 !important; }
+    </style>
+</head>
+<body>
+    <div class="lg-wrap">
+
+        <!-- LEFT: registration form -->
+        <div class="lg-right">
+            <div class="lg-form">
+                <div class="lg-brand">
+                    <div class="lg-logo"><i class="fa-solid fa-building-columns"></i></div>
+                    <span>FinanceFlow</span>
+                </div>
+
+                <div>
+                    <h1 class="lg-title">Create your account</h1>
+                    <div class="lg-sub">Start managing your wealth with precision</div>
+                </div>
+
+                <div>
+                    @if (ViewBag.Error != null)
+                    {
+                        <div class="lg-error"><i class="fa-solid fa-circle-exclamation"></i><span>@ViewBag.Error</span></div>
+                    }
+                </div>
+
+                <form action="@Url.Action("Register", "Account")" method="post" style="animation-delay:.4s;">
+                    @Html.AntiForgeryToken()
+                    <div class="lg-field">
+                        <i class="fa-regular fa-user ic"></i>
+                        <input type="text" name="name" placeholder="Full name" required autocomplete="name" />
+                    </div>
+                    <div class="lg-field">
+                        <i class="fa-regular fa-envelope ic"></i>
+                        <input type="email" name="email" placeholder="Email address" required autocomplete="email" />
+                    </div>
+                    <div class="lg-field">
+                        <i class="fa-solid fa-lock ic"></i>
+                        <input type="password" id="password" name="password" placeholder="Password" required autocomplete="new-password" />
+                        <i class="fa-regular fa-eye lg-eye" data-target="password"></i>
+                    </div>
+                    <div class="lg-strength"><div id="strengthBar"></div></div>
+                    <div class="lg-hint" id="strengthText">Use 8+ characters with letters, numbers and a symbol</div>
+                    <div class="lg-field">
+                        <i class="fa-solid fa-shield-halved ic"></i>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm password" required autocomplete="new-password" />
+                        <i class="fa-regular fa-eye lg-eye" data-target="confirmPassword"></i>
+                    </div>
+                    <div class="lg-hint" id="matchText"></div>
+                    <button type="submit" class="lg-btn">Create Account <i class="fa-solid fa-arrow-right"></i></button>
+                </form>
+
+                <div class="lg-terms" style="animation-delay:.5s;">By signing up you agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</div>
+                <div class="lg-or" style="animation-delay:.55s;">or</div>
+                <div class="lg-foot" style="animation-delay:.6s;">
+                    Already have an account? <a href="@Url.Action("Login", "Account")">Login here</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: animated showcase -->
+        <div class="lg-left">
+            <div class="lg-grid"></div>
+            <div class="lg-orb a"></div>
+            <div class="lg-orb b"></div>
+            <div class="lg-orb c"></div>
+
+            <div class="lg-headline">
+                <h2>Join and <span>take control</span> of your money</h2>
+                <p>Budgets, debts, bills and reports in one beautiful place.</p>
+            </div>
+
+            <div class="lg-stage" id="stage">
+                <!-- Card 1: budgets -->
+                <div class="lg-card">
+                    <div class="lg-card-top"><i class="fa-solid fa-wallet"></i> Smart Budgets</div>
+                    <div class="lg-card-body">
+                        <div class="goal"><div class="row"><span>Food</span><b>80%</b></div><div class="bar"><div class="fill" style="--w:80%"></div></div></div>
+                        <div class="goal"><div class="row"><span>Transport</span><b>45%</b></div><div class="bar"><div class="fill" style="--w:45%"></div></div></div>
+                        <div class="goal"><div class="row"><span>Shopping</span><b>62%</b></div><div class="bar"><div class="fill" style="--w:62%"></div></div></div>
+                    </div>
+                    <div class="lg-card-foot"><div class="big">3</div><div class="small">budgets tracked<br />in real time</div></div>
+                </div>
+
+                <!-- Card 2: debt tracker donut -->
+                <div class="lg-card">
+                    <div class="lg-card-top"><i class="fa-solid fa-money-bill-transfer"></i> Debt Tracker</div>
+                    <div class="lg-card-body">
+                        <div class="donut">
+                            <svg width="150" height="150" viewBox="0 0 150 150">
+                                <defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f472b6" /><stop offset="100%" stop-color="#6366f1" /></linearGradient></defs>
+                                <circle class="bg" cx="75" cy="75" r="52" />
+                                <circle class="fg" cx="75" cy="75" r="52" style="--off:228.7" />
+                            </svg>
+                            <div class="label">30%<small>cleared</small></div>
+                        </div>
+                        <div class="legend"><span>Cleared: Rs. 15,000</span><span>Total: Rs. 50,000</span></div>
+                    </div>
+                    <div class="lg-card-foot"><div class="big">Rs. 35K</div><div class="small">remaining<br />to repay</div></div>
+                </div>
+
+                <!-- Card 3: reports -->
+                <div class="lg-card">
+                    <div class="lg-card-top"><i class="fa-solid fa-chart-column"></i> Reports &amp; Export</div>
+                    <div class="lg-card-body">
+                        <div class="bars">
+                            <span style="--h:40%"></span><span style="--h:62%"></span><span style="--h:50%"></span><span style="--h:80%"></span>
+                            <span style="--h:68%"></span><span style="--h:92%"></span><span style="--h:75%"></span>
+                        </div>
+                        <div class="days"><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span></div>
+                    </div>
+                    <div class="lg-card-foot"><div class="big">PDF</div><div class="small">&amp; CSV export<br />in one click</div></div>
+                </div>
+
+                <!-- Card 4: QR -->
+                <div class="lg-card">
+                    <div class="lg-card-top"><i class="fa-solid fa-qrcode"></i> Bill QR Codes</div>
+                    <div class="lg-card-body">
+                        <div class="qr"><span class="on" style="transition-delay:0ms"></span><span class="on" style="transition-delay:25ms"></span><span class="on" style="transition-delay:50ms"></span><span class="on" style="transition-delay:75ms"></span><span class="on" style="transition-delay:100ms"></span><span class="" style="transition-delay:125ms"></span><span class="on" style="transition-delay:150ms"></span><span class="on" style="transition-delay:175ms"></span><span class="on" style="transition-delay:200ms"></span><span class="on" style="transition-delay:25ms"></span><span class="" style="transition-delay:50ms"></span><span class="on" style="transition-delay:75ms"></span><span class="on" style="transition-delay:100ms"></span><span class="" style="transition-delay:125ms"></span><span class="on" style="transition-delay:150ms"></span><span class="on" style="transition-delay:175ms"></span><span class="" style="transition-delay:200ms"></span><span class="on" style="transition-delay:225ms"></span><span class="on" style="transition-delay:50ms"></span><span class="on" style="transition-delay:75ms"></span><span class="on" style="transition-delay:100ms"></span><span class="on" style="transition-delay:125ms"></span><span class="" style="transition-delay:150ms"></span><span class="on" style="transition-delay:175ms"></span><span class="on" style="transition-delay:200ms"></span><span class="on" style="transition-delay:225ms"></span><span class="on" style="transition-delay:250ms"></span><span class="on" style="transition-delay:75ms"></span><span class="on" style="transition-delay:100ms"></span><span class="on" style="transition-delay:125ms"></span><span class="on" style="transition-delay:150ms"></span><span class="" style="transition-delay:175ms"></span><span class="on" style="transition-delay:200ms"></span><span class="on" style="transition-delay:225ms"></span><span class="" style="transition-delay:250ms"></span><span class="" style="transition-delay:275ms"></span><span class="" style="transition-delay:100ms"></span><span class="on" style="transition-delay:125ms"></span><span class="" style="transition-delay:150ms"></span><span class="on" style="transition-delay:175ms"></span><span class="" style="transition-delay:200ms"></span><span class="on" style="transition-delay:225ms"></span><span class="on" style="transition-delay:250ms"></span><span class="on" style="transition-delay:275ms"></span><span class="on" style="transition-delay:300ms"></span><span class="" style="transition-delay:125ms"></span><span class="on" style="transition-delay:150ms"></span><span class="" style="transition-delay:175ms"></span><span class="" style="transition-delay:200ms"></span><span class="on" style="transition-delay:225ms"></span><span class="" style="transition-delay:250ms"></span><span class="on" style="transition-delay:275ms"></span><span class="on" style="transition-delay:300ms"></span><span class="on" style="transition-delay:325ms"></span><span class="on" style="transition-delay:150ms"></span><span class="on" style="transition-delay:175ms"></span><span class="on" style="transition-delay:200ms"></span><span class="" style="transition-delay:225ms"></span><span class="on" style="transition-delay:250ms"></span><span class="on" style="transition-delay:275ms"></span><span class="" style="transition-delay:300ms"></span><span class="on" style="transition-delay:325ms"></span><span class="on" style="transition-delay:350ms"></span><span class="on" style="transition-delay:175ms"></span><span class="" style="transition-delay:200ms"></span><span class="on" style="transition-delay:225ms"></span><span class="" style="transition-delay:250ms"></span><span class="" style="transition-delay:275ms"></span><span class="on" style="transition-delay:300ms"></span><span class="" style="transition-delay:325ms"></span><span class="" style="transition-delay:350ms"></span><span class="" style="transition-delay:375ms"></span><span class="on" style="transition-delay:200ms"></span><span class="on" style="transition-delay:225ms"></span><span class="on" style="transition-delay:250ms"></span><span class="" style="transition-delay:275ms"></span><span class="on" style="transition-delay:300ms"></span><span class="" style="transition-delay:325ms"></span><span class="on" style="transition-delay:350ms"></span><span class="on" style="transition-delay:375ms"></span><span class="" style="transition-delay:400ms"></span></div>
+                        <div class="qr-cap">WAPDA Electricity &bull; Rs. 85.20</div>
+                    </div>
+                    <div class="lg-card-foot"><div class="big">1</div><div class="small">QR code<br />for every bill</div></div>
+                </div>
+            </div>
+
+            <div class="lg-dots" id="dots"><span></span><span></span><span></span><span></span></div>
+        </div>
+    </div>
+
+    <script>
+        // show / hide password (works for both password fields)
+        document.querySelectorAll('.lg-eye').forEach(function (eye) {
+            eye.addEventListener('click', function () {
+                var input = document.getElementById(eye.getAttribute('data-target'));
+                if (!input) return;
+                var hidden = input.type === 'password';
+                input.type = hidden ? 'text' : 'password';
+                eye.classList.toggle('fa-eye', !hidden);
+                eye.classList.toggle('fa-eye-slash', hidden);
+            });
+        });
+
+        // password strength + match check
+        (function () {
+            var pwd = document.getElementById('password');
+            var confirmInput = document.getElementById('confirmPassword');
+            var bar = document.getElementById('strengthBar');
+            var text = document.getElementById('strengthText');
+            var match = document.getElementById('matchText');
+
+            function strength(v) {
+                var score = 0;
+                if (v.length >= 8) score++;
+                if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+                if (/[0-9]/.test(v)) score++;
+                if (/[^A-Za-z0-9]/.test(v)) score++;
+                return score;
+            }
+
+            function updateStrength() {
+                var v = pwd.value;
+                if (!v) {
+                    bar.style.width = '0'; text.textContent = 'Use 8+ characters with letters, numbers and a symbol'; text.className = 'lg-hint';
+                    return;
+                }
+                var s = strength(v);
+                var labels = ['Very weak', 'Weak', 'Okay', 'Strong', 'Very strong'];
+                var colors = ['#e11d48', '#f97316', '#f59e0b', '#22c55e', '#16a34a'];
+                bar.style.width = (20 + s * 20) + '%';
+                bar.style.background = colors[s];
+                text.textContent = 'Password strength: ' + labels[s];
+                text.className = 'lg-hint' + (s >= 3 ? ' ok' : '');
+            }
+
+            function updateMatch() {
+                if (!confirmInput.value) { match.textContent = ''; match.className = 'lg-hint'; confirmInput.setCustomValidity(''); return; }
+                if (confirmInput.value === pwd.value) {
+                    match.innerHTML = '<i class="fa-solid fa-circle-check"></i> Passwords match'; match.className = 'lg-hint ok'; confirmInput.setCustomValidity('');
+                } else {
+                    match.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Passwords do not match'; match.className = 'lg-hint bad'; confirmInput.setCustomValidity('Passwords do not match');
+                }
+            }
+
+            pwd.addEventListener('input', function () { updateStrength(); updateMatch(); });
+            confirmInput.addEventListener('input', updateMatch);
+        })();
+
+        // rotating showcase cards (the middle card glows and animates)
+        (function () {
+            var cards = Array.prototype.slice.call(document.querySelectorAll('.lg-card'));
+            var dots = Array.prototype.slice.call(document.querySelectorAll('#dots span'));
+            if (!cards.length) return;
+            var active = 0;
+            var gap = 300;
+            var stage = document.getElementById('stage');
+
+            // shrink the showcase so that all three cards fit inside the left panel
+            function fit() {
+                var w = stage.parentElement.clientWidth;
+                var sc = Math.min(1, (w - 30) / 880);
+                stage.style.transform = 'scale(' + sc + ')';
+                stage.style.transformOrigin = 'center center';
+                var m = -(1 - sc) * 200;
+                stage.style.marginTop = m + 'px';
+                stage.style.marginBottom = m + 'px';
+            }
+            fit();
+            window.addEventListener('resize', fit);
+
+            function layout() {
+                var n = cards.length;
+                cards.forEach(function (card, i) {
+                    var off = (i - active + n) % n;
+                    if (off > n / 2) off -= n;
+                    var isActive = off === 0;
+                    card.classList.toggle('active', isActive);
+                    card.style.transform = 'translate(-50%, -50%) translateX(' + (off * gap) + 'px) scale(' + (isActive ? 1 : 0.86) + ')';
+                    card.style.opacity = Math.abs(off) > 1 ? 0 : (isActive ? 1 : 0.85);
+                    card.style.zIndex = isActive ? 3 : 2;
+                });
+                dots.forEach(function (d, i) { d.classList.toggle('on', i === active); });
+            }
+
+            layout();
+            setInterval(function () { active = (active + 1) % cards.length; layout(); }, 2400);
+            dots.forEach(function (d, i) { d.style.cursor = 'pointer'; d.addEventListener('click', function () { active = i; layout(); }); });
+        })();
+    </script>
+</body>
+</html>
